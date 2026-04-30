@@ -1,0 +1,25 @@
+{
+  "timestamp": "2026-03-17T09:46:09.235973",
+  "metrics": {
+    "train_accuracy": 0.8037222395996246,
+    "val_accuracy": 0.7989234558890612,
+    "test_accuracy": 0.8039591315453385,
+    "train_precision": 0.8315950537097178,
+    "val_precision": 0.8275811853793505,
+    "test_precision": 0.8264048165137615,
+    "train_recall": 0.85142911950892,
+    "val_recall": 0.8478293301506789,
+    "test_recall": 0.8600626585111144,
+    "train_f1": 0.8413952165808347,
+    "val_f1": 0.8375829034635225,
+    "test_f1": 0.8428978726515096,
+    "train_auc": 0.8866103422274569,
+    "val_auc": 0.8819908775239763,
+    "test_auc": 0.8866155853509854,
+    "cv_mean": 0.7979355882057034,
+    "cv_std": 0.0023483496282877504
+  },
+  "overfitting_detected": false,
+  "gap_threshold": 0.12,
+  "regularization": "C=0.01, L2 penalty"
+}
