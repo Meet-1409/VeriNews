@@ -1,6 +1,6 @@
 # VeriNews - Advanced Fake News Detection System
 
-## 📋 Table of Contents
+## Table of Contents
 - [Project Overview](#project-overview)
 - [Key Features](#key-features)
 - [System Architecture](#system-architecture)
@@ -20,7 +20,7 @@
 
 ---
 
-## 🎯 Project Overview
+## Project Overview
 
 **Why VeriNews Exists**: In an era of information overload and widespread misinformation, there's a critical need for automated systems that can help identify fake news while maintaining transparency about their decision-making process. VeriNews addresses this by providing a comprehensive, multi-model approach to fake news detection.
 
@@ -36,7 +36,7 @@
 
 ---
 
-## 🚀 Key Features
+## Key Features
 
 ### Machine Learning Pipeline
 **Why included**: A systematic approach to data processing ensures consistency and reproducibility. Raw text data is noisy and unstructured - this pipeline transforms it into formats that ML models can effectively learn from.
@@ -66,7 +66,7 @@
 
 ---
 
-## 🏗️ System Architecture
+## System Architecture
 
 ### High-Level Architecture
 ```
@@ -126,7 +126,7 @@
 
 ---
 
-## 📊 Dataset Information
+## Dataset Information
 
 ### Combined Dataset Overview
 - **Total Samples**: 73,075 news articles
@@ -246,7 +246,7 @@ def clean_dataset(df: pd.DataFrame) -> pd.DataFrame:
 
 ---
 
-## 🤖 Machine Learning Models
+## Machine Learning Models
 
 ### Available Models Overview
 The system currently implements **6 production-ready models**:
@@ -278,7 +278,7 @@ The system currently implements **6 production-ready models**:
 
 ---
 
-## 🧠 Deep Learning Models
+## Deep Learning Models
 
 ### 3. BERT (Bidirectional Encoder Representations from Transformers)
 - **Architecture**: 12-layer transformer encoder (bert-base-uncased)
@@ -344,7 +344,7 @@ model = Sequential([
 
 ---
 
-## 🔄 Hybrid Models
+## Hybrid Models
 
 ### CNN-LSTM Architecture Details
 ```
@@ -370,7 +370,7 @@ Linear Projection → Conv1D → MaxPooling → Dense → Output
 
 ---
 
-## 🎯 Ensemble Methods
+## Ensemble Methods
 
 ### 6. Voting Ensemble Model
 - **Architecture**: Combines predictions from multiple models
@@ -402,7 +402,7 @@ ensemble = VotingClassifier(
 
 ---
 
-## 🌐 Frontend Interface
+## Frontend Interface
 
 ### Streamlit Application Structure
 
@@ -413,7 +413,7 @@ st.set_page_config(page_title="VeriNews", layout="wide")
 
 # Sidebar
 with st.sidebar:
-    st.title("📰 VeriNews")
+    st.title("VeriNews")
     st.markdown("---")
     model_selection()
     analysis_options()
@@ -462,7 +462,7 @@ selected_model = st.selectbox(
 
 ---
 
-## ⚙️ Backend Components
+## Backend Components
 
 ### Core Modules
 
@@ -518,7 +518,7 @@ async def get_metrics(model_name: str):
 
 ---
 
-## 🔗 API Integration
+## API Integration
 
 ### Why External APIs Are Critical
 **Purpose**: No ML model is infallible. External validation from trusted sources provides ground truth and prevents the system from operating in an echo chamber. These APIs connect the system to the broader fact-checking ecosystem.
@@ -592,7 +592,7 @@ def fetch_related_articles(query, source=None):
 
 ---
 
-## 🛠️ Installation & Setup
+## Installation & Setup
 
 ### Prerequisites
 - **Python**: 3.8 or higher
@@ -658,7 +658,7 @@ lime>=0.2.0
 
 ---
 
-## 📖 Usage Guide
+## Usage Guide
 
 ### Quick Start
 
@@ -750,7 +750,7 @@ print(f"Emotion: {sentiment['emotion']}")
 
 ---
 
-## 📈 Performance Metrics
+## Performance Metrics
 
 ### Why Performance Metrics Matter
 **Purpose**: Numbers alone don't tell the story. These metrics help users understand what the system can and cannot do, and make informed decisions about when to trust its predictions.
@@ -821,7 +821,7 @@ weighted avg       0.80      0.80      0.80     10962
 
 ---
 
-## 🔧 Technical Details
+## Technical Details
 
 ### Model Architecture Specifications
 
@@ -887,7 +887,7 @@ weighted avg       0.80      0.80      0.80     10962
 
 ---
 
-## 🚀 Future Enhancements
+## Future Enhancements
 
 ### Planned Features
 
@@ -931,7 +931,7 @@ weighted avg       0.80      0.80      0.80     10962
 
 ---
 
-## 📞 Support & Contributing
+## Support & Contributing
 
 ### Getting Help
 - **Documentation**: Comprehensive README and docstrings
@@ -954,7 +954,7 @@ weighted avg       0.80      0.80      0.80     10962
 
 ---
 
-## 📄 License & Attribution
+## License & Attribution
 
 ### License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
@@ -979,18 +979,18 @@ If you use VeriNews in your research, please cite:
 
 ---
 
-## 🎯 Conclusion
+## Conclusion
 
 VeriNews represents a comprehensive approach to fake news detection, combining the best of traditional machine learning, modern deep learning, and advanced analysis techniques. The system's modular architecture allows for easy extension and customization, while the ensemble approach ensures robust performance across diverse news content.
 
 ### Key Achievements
-- ✅ **6 Production Models** with 80-94% accuracy
-- ✅ **73K Sample Dataset** from multiple sources
-- ✅ **Web Interface** for easy interaction
-- ✅ **API Integrations** for fact-checking
-- ✅ **Comprehensive Analysis** pipeline
-- ✅ **Explainable AI** capabilities
-- ✅ **Scalable Architecture** for production use
+- [x] **6 Production Models** with 80-94% accuracy
+- [x] **73K Sample Dataset** from multiple sources
+- [x] **Web Interface** for easy interaction
+- [x] **API Integrations** for fact-checking
+- [x] **Comprehensive Analysis** pipeline
+- [x] **Explainable AI** capabilities
+- [x] **Scalable Architecture** for production use
 
 ### Impact
 The system demonstrates that combining multiple detection approaches with comprehensive analysis can significantly improve fake news detection accuracy while maintaining interpretability and usability.
