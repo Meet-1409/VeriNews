@@ -2,11 +2,13 @@
 .env
 .env.local
 .env*.local
+.streamlit/secrets.toml
 
 # Python
 __pycache__/
 *.py[cod]
 *$py.class
+*.pyo
 *.so
 .Python
 build/
@@ -52,6 +54,14 @@ venv.bak/
 .ipynb_checkpoints
 *.ipynb
 
+# Test and type-check output
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
 # Database files
 *.db
 *.sqlite
@@ -85,3 +95,7 @@ Thumbs.db
 # Project specific
 verinews.db
 *.onnx
+
+# Generated reports and local exports
+site/
+coverage.xml

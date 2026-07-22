@@ -17,11 +17,10 @@ def rank_articles_by_similarity(
     top_k: int = 5
 ) -> List[Dict]:
     """
-    Rank verified news articles based on similarity
-    to the fake news text.
+    Rank related publisher coverage by similarity to submitted text.
 
     Args:
-        fake_news_text (str): Input fake news text
+        fake_news_text (str): User-submitted headline or article text
         articles (List[Dict]): Retrieved news articles
         vectorizer_path (str): Path to saved TF-IDF vectorizer
         top_k (int): Number of top articles to return
@@ -44,7 +43,7 @@ def rank_articles_by_similarity(
     # Load trained TF-IDF vectorizer
     tfidf = joblib.load(str(vectorizer_path))
 
-    # Preprocess fake news text
+    # Preprocess the submitted text
     cleaned_fake_text = clean_text(fake_news_text)
 
     # Collect article texts (prefer description, fallback to title)
@@ -76,7 +75,7 @@ def rank_articles_by_similarity(
     sims_ranked = raw_sims[ranked_indices]
     max_sim = float(np.max(sims_ranked))
     if max_sim <= 0:
-        # No vocabulary overlap: assign descending relevance by position
+        # Preserve the existing display behavior when there is no overlap.
         sims_ranked = np.linspace(0.95, 0.5, len(ranked_indices))
     else:
         sims_ranked = sims_ranked / max_sim
