@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VeriNews — Check a claim before it spreads</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css">
+<style>
+  .hero { max-width: 720px; }
+  .hero h1 { font-size: clamp(32px, 5vw, 44px); margin-bottom: 12px; }
+  .hero p  { font-size: 17px; color: var(--muted); margin: 0; }
+
+  .composer { display: flex; flex-direction: column; gap: 14px; }
+  .composer label { font-weight: 600; }
+  .composer textarea {
+    width: 100%; resize: vertical;
+    border: 1px solid var(--input-b); border-radius: 10px;
+    padding: 14px; font: inherit; font-size: 16px;
+    color: var(--ink); background: #FBFBFC;
+    min-height: 140px;
+  }
+  .composer textarea:focus { border-color: var(--real-text); }
+
+  .composer-footer {
+    display: flex; flex-wrap: wrap; align-items: center;
+    justify-content: space-between; gap: 12px;
+  }
+  .word-count { color: var(--muted); font-size: 13px; }
+
+  .model-row {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+    padding-top: 2px;
+  }
+  .model-row label { font-size: 13px; color: var(--muted); flex-shrink: 0; }
+  .model-select {
+    min-height: 36px; padding: 0 10px;
+    border: 1px solid var(--input-b); border-radius: 8px;
+    background: var(--surface); color: var(--ink);
+    font-size: 14px; cursor: pointer;
+  }
+
+  .example-row {
+    border-top: 1px solid var(--line); padding-top: 14px;
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  }
+  .example-label { font-size: 13px; color: var(--muted); }
+  .example-chip {
+    min-height: 36px; padding: 0 13px;
+    border: 1px solid var(--input-b); border-radius: 999px;
+    background: var(--surface); color: var(--ink);
+    font-size: 14px; cursor: pointer;
+  }
+  .example-chip:hover { background: var(--soft); }
+
+  .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
+  .feature-num { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 13px; color: var(--real-text); margin-bottom: 4px; }
+  .feature-title { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+  .feature-desc { font-size: 14px; color: var(--muted); margin: 0; }
+
+  .section-header {
+    display: flex; align-items: center;
+    justify-content: space-between; gap: 12px;
+    margin-bottom: 10px;
+  }
+  .section-title { font-size: 20px; }
+  .view-all { font-weight: 600; font-size: 14px; }
+
+  .history-list { overflow: hidden; }
+  .history-row {
+    display: flex; flex-wrap: wrap; align-items: center;
+    gap: 8px 16px; padding: 13px 18px;
+    text-decoration: none; color: var(--ink);
+    border-bottom: 1px solid var(--line);
+    transition: background .12s;
+  }
+  .history-row:last-child { border-bottom: none; }
+  .history-row:hover { background: #F8F9FA; }
+  .history-text { flex: 1 1 320px; min-width: 0; font-size: 15px; }
+  .history-when { color: var(--muted); font-size: 13px; white-space: nowrap; }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-logo" href="/">
+      <svg aria-hidden="true" width="28" height="28" viewBox="0 0 28 28" fill="none">
+        <rect width="28" height="28" rx="7" fill="#0F1728"/>
+        <path d="M8 14.5l4 4 8-9" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      VeriNews
+    </a>
+    <div class="nav-tabs">
+      <a class="nav-tab active" href="/" aria-current="page">Analyze</a>
+      <a class="nav-tab" href="/history">History</a>
+    </div>
+    <div id="model-status" style="display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px">
+      <span aria-hidden="true" id="status-dot" style="width:8px;height:8px;border-radius:50%;background:#C9CED8"></span>
+      <span id="status-text">Checking…</span>
+    </div>
+  </div>
+</nav>
+
+<main class="container" style="padding-top:52px;padding-bottom:72px;display:flex;flex-direction:column;gap:40px">
+
+  <!-- hero -->
+  <section class="hero">
+    <h1>Check a claim before it spreads</h1>
+    <p>Paste a headline, post or article excerpt. You get a model score, the words that drove it, and related coverage from trusted outlets.</p>
+  </section>
+
+  <!-- composer -->
+  <section class="card composer" aria-label="New check">
+    <label for="claim">Claim or article text</label>
+    <textarea id="claim" rows="6" placeholder="Paste the text you want to check…" spellcheck="false"></textarea>
+
+    <div class="model-row">
+      <label for="model-select">Model:</label>
+      <select id="model-select" class="model-select" title="Choose classifier">
+        <option value="ensemble">Ensemble (recommended)</option>
+      </select>
+    </div>
+
+    <div class="composer-footer">
+      <span class="word-count" id="word-count">0 words. Longer excerpts give better source matching.</span>
+      <button class="btn-primary" id="analyze-btn" type="button">
+        Analyze claim
+        <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="error-banner" id="error-banner" role="alert"></div>
+
+    <div class="example-row">
+      <span class="example-label">Try an example</span>
+      <button class="example-chip" data-text="Government announces new vaccination drive in rural areas with help from WHO officials">Vaccination drive</button>
+      <button class="example-chip" data-text="Celebrity secretly controls the weather with a device hidden in their mansion, leaked documents reveal">Secret device leak</button>
+      <button class="example-chip" data-text="Doctors stunned as a common kitchen spice cures every illness overnight, big pharma doesn't want you to know">Kitchen spice cure</button>
+    </div>
+  </section>
+
+  <!-- features -->
+  <section class="features" aria-label="What you get">
+    <div class="card">
+      <div class="feature-num">01</div>
+      <div class="feature-title">Model score</div>
+      <p class="feature-desc">Fake and real probabilities side by side, with a plain-language verdict.</p>
+    </div>
+    <div class="card">
+      <div class="feature-num">02</div>
+      <div class="feature-title">Word-level explanation</div>
+      <p class="feature-desc">The words that pushed the score, highlighted right in your text.</p>
+    </div>
+    <div class="card">
+      <div class="feature-num">03</div>
+      <div class="feature-title">Related coverage</div>
+      <p class="feature-desc">Reporting from trusted outlets, ranked by how closely it matches the claim.</p>
+    </div>
+    <div class="card">
+      <div class="feature-num">04</div>
+      <div class="feature-title">Multiple models</div>
+      <p class="feature-desc">Switch between Logistic Regression, Naive Bayes, SVM, or the Ensemble.</p>
+    </div>
+  </section>
+
+  <!-- recent checks -->
+  <section>
+    <div class="section-header">
+      <h2 class="section-title">Recent checks</h2>
+      <a class="view-all" href="/history">View all →</a>
+    </div>
+    <div class="card" style="padding:0">
+      <div class="history-list" id="recent-list">
+        <div style="padding:40px 18px;text-align:center;color:var(--muted)">No checks yet. Run your first analysis above.</div>
+      </div>
+    </div>
+  </section>
+
+  <p style="color:var(--muted);font-size:13px;margin:0">VeriNews is a research prototype. Scores reflect writing patterns, not verified facts.</p>
+</main>
+
+<script>
+const EXAMPLES = [
+  "Government announces new vaccination drive in rural areas with help from WHO officials",
+  "Celebrity secretly controls the weather with a device hidden in their mansion, leaked documents reveal",
+  "Doctors stunned as a common kitchen spice cures every illness overnight, big pharma doesn't want you to know"
+];
+
+const textarea   = document.getElementById('claim');
+const wordCount  = document.getElementById('word-count');
+const modelSel   = document.getElementById('model-select');
+const analyzeBtn = document.getElementById('analyze-btn');
+const errBanner  = document.getElementById('error-banner');
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function pillClass(label) {
+  if (!label) return 'pill-uncertain';
+  const l = label.toLowerCase();
+  if (l === 'fake') return 'pill-fake';
+  if (l === 'real') return 'pill-real';
+  return 'pill-uncertain';
+}
+function pillText(label) {
+  if (!label) return 'Uncertain';
+  const l = label.toLowerCase();
+  if (l === 'fake') return 'Likely fake';
+  if (l === 'real') return 'Likely real';
+  return 'Uncertain';
+}
+function fmtDate(iso) {
+  if (!iso) return '';
+  try {
+    const d = new Date(iso + 'Z');
+    const now = new Date();
+    const diff = now - d;
+    const time = d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+    if (diff < 86400000) return 'Today, ' + time;
+    if (diff < 172800000) return 'Yesterday, ' + time;
+    return d.toLocaleDateString([], {day:'numeric',month:'short'}) + ', ' + time;
+  } catch { return iso; }
+}
+function showError(msg) { errBanner.textContent = msg; errBanner.style.display = 'block'; }
+function hideError()     { errBanner.style.display = 'none'; }
+
+// word count
+textarea.addEventListener('input', () => {
+  const n = textarea.value.trim() ? textarea.value.trim().split(/\s+/).length : 0;
+  wordCount.textContent = n + ' word' + (n !== 1 ? 's' : '') + '. Longer excerpts give better source matching.';
+});
+
+// example chips
+document.querySelectorAll('.example-chip').forEach(btn => {
+  btn.addEventListener('click', () => {
+    textarea.value = btn.dataset.text;
+    textarea.dispatchEvent(new Event('input'));
+    textarea.focus();
+  });
+});
+
+// load models
+async function loadModels() {
+  try {
+    const r = await fetch('/api/models');
+    const d = await r.json();
+    const avail = (d.models || []).filter(m => m.available);
+    if (avail.length) {
+      modelSel.innerHTML = avail.map(m =>
+        `<option value="${m.key}"${m.key==='ensemble'?' selected':''}>${escHtml(m.display_name)}</option>`
+      ).join('');
+    }
+  } catch {}
+}
+
+// model status
+async function checkHealth() {
+  try {
+    const r = await fetch('/api/health');
+    const d = await r.json();
+    const dot  = document.getElementById('status-dot');
+    const text = document.getElementById('status-text');
+    if (d.models_ready) {
+      dot.style.background  = '#1D4FD7';
+      text.textContent      = 'Model loaded';
+    } else {
+      dot.style.background  = '#C2470F';
+      text.textContent      = 'Models not trained';
+    }
+  } catch {
+    document.getElementById('status-text').textContent = 'Offline';
+  }
+}
+
+// recent history
+async function loadRecent() {
+  try {
+    const r = await fetch('/api/history?limit=5');
+    const d = await r.json();
+    const list = document.getElementById('recent-list');
+    const items = d.history || [];
+    if (!items.length) return;
+    list.innerHTML = items.map(item => `
+      <a class="history-row" href="/result?id=${item.id}">
+        <span style="min-width:112px"><span class="pill ${pillClass(item.label)}">${pillText(item.label)}</span></span>
+        <span class="history-text">${escHtml((item.text||'').substring(0,110))}${(item.text||'').length>110?'…':''}</span>
+        <span class="history-when">${fmtDate(item.created_at)}</span>
+      </a>`).join('');
+  } catch {}
+}
+
+// analyze
+analyzeBtn.addEventListener('click', async () => {
+  const text = textarea.value.trim();
+  if (!text || text.length < 10) { showError('Please enter at least a few words.'); return; }
+  hideError();
+
+  analyzeBtn.disabled = true;
+  analyzeBtn.innerHTML = '<span class="spinner"></span> Analyzing…';
+
+  try {
+    const res = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ text, model_key: modelSel.value, include_evidence: false })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Analysis failed (' + res.status + ')');
+    }
+    const data = await res.json();
+    sessionStorage.setItem('vn_result', JSON.stringify({...data, text}));
+    window.location.href = '/result';
+  } catch (e) {
+    showError(e.message);
+    analyzeBtn.disabled = false;
+    analyzeBtn.innerHTML = 'Analyze claim <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  }
+});
+
+checkHealth();
+loadModels();
+loadRecent();
+</script>
+</body>
+</html>

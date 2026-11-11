@@ -25,5 +25,8 @@ PERPLEXITY_MODEL = os.getenv("PERPLEXITY_MODEL", "sonar")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
-# Optional key for future Cursor-connected integrations
-CURSOR_API_KEY = os.getenv("CURSOR_API_KEY", "")
+# Database
+DB_PATH = os.getenv("DB_PATH", str(Path(__file__).resolve().parent.parent / "data" / "verinews.db"))
+
+# Models directory (pre-trained .pkl files)
+MODELS_DIR = os.getenv("MODELS_DIR", str(Path(__file__).resolve().parent.parent / "models"))

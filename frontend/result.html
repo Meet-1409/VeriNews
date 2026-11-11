@@ -1,0 +1,569 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VeriNews — Result</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css">
+<style>
+  .kicker { font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin-bottom:4px; }
+  .section-h2 { font-size:19px; margin-bottom:4px; }
+  .sub { font-size:14px; color:var(--muted); margin:0; }
+
+  /* Verdict */
+  .verdict-label { font-size:30px; font-weight:700; }
+  .verdict-caveat { font-size:13px; color:var(--muted); margin:8px 0 0; }
+
+  /* Model tabs */
+  .model-tabs { display:flex; flex-wrap:wrap; gap:6px; }
+  .model-tab {
+    min-height:36px; padding:0 14px;
+    border:1px solid var(--input-b); border-radius:8px;
+    background:var(--surface); color:var(--ink);
+    font-size:14px; font-weight:500; cursor:pointer; transition:all .15s;
+  }
+  .model-tab:hover  { background:var(--soft); }
+  .model-tab.active { background:var(--primary); color:var(--primary-fg); border-color:var(--primary); }
+
+  /* Explanation */
+  .explained-text { font-size:15px; line-height:1.75; }
+  mark { border-radius:3px; padding:1px 2px; }
+  .word-bars { display:flex; flex-direction:column; gap:7px; margin-top:12px; }
+  .word-bar-row { display:flex; align-items:center; gap:10px; }
+  .word-bar-label { width:120px; font-size:13px; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .word-bar-track { flex:1; height:8px; background:var(--soft); border-radius:999px; overflow:hidden; }
+  .word-bar-fill  { height:100%; border-radius:999px; }
+  .word-bar-score { width:40px; text-align:right; font-size:12px; color:var(--muted); }
+
+  /* Magazine article cards */
+  .article-card {
+    display:flex; gap:16px; padding:16px 0;
+    border-bottom:1px solid var(--line);
+  }
+  .article-card:last-child { border-bottom:none; padding-bottom:0; }
+  .article-img {
+    width:140px; height:100px; flex-shrink:0;
+    border-radius:8px; object-fit:cover; background:var(--soft);
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden;
+  }
+  .article-img img { width:100%; height:100%; object-fit:cover; border-radius:8px; }
+  .article-img .no-img { color:var(--muted); font-size:11px; text-align:center; padding:8px; }
+  .article-body { flex:1; min-width:0; display:flex; flex-direction:column; gap:5px; }
+  .article-meta-row { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+  .chip { font-size:12px; font-weight:600; padding:2px 8px; border-radius:4px; background:var(--soft); color:var(--muted); }
+  .match-wrap { display:flex; align-items:center; gap:6px; }
+  .match-track { width:70px; height:5px; background:var(--soft); border-radius:999px; overflow:hidden; }
+  .match-fill  { height:100%; background:var(--real-bar); border-radius:999px; }
+  .match-pct { font-size:12px; color:var(--muted); }
+  .article-title-link { font-weight:600; font-size:15px; color:var(--ink); text-decoration:none; line-height:1.35; }
+  .article-title-link:hover { color:var(--real-text); }
+  .article-desc  { font-size:13px; color:var(--muted); line-height:1.5; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; }
+  .article-read  { font-size:13px; font-weight:600; color:var(--real-text); text-decoration:none; }
+  .article-read:hover { text-decoration:underline; }
+
+  /* Evidence brief */
+  .evidence-section { display:flex; flex-direction:column; gap:14px; }
+  .metric-row { display:flex; flex-wrap:wrap; gap:12px; }
+  .metric-box {
+    flex:1 1 120px; min-height:70px;
+    background:var(--soft); border-radius:10px; padding:12px 14px;
+  }
+  .metric-label { font-size:12px; color:var(--muted); font-weight:500; }
+  .metric-value { font-size:20px; font-weight:700; margin-top:2px; }
+  .kp-list { margin:0; padding:0 0 0 20px; display:flex; flex-direction:column; gap:5px; }
+  .kp-list li { font-size:14px; color:var(--ink); line-height:1.5; }
+  .citation-list { display:flex; flex-direction:column; gap:6px; }
+  .citation-link { font-size:13px; color:var(--real-text); word-break:break-all; }
+  .contradiction-box {
+    background:#FFF7ED; border:1px solid #FED7AA; border-radius:8px;
+    padding:12px 14px; font-size:14px; color:#9A3412;
+  }
+  .evidence-get-btn {
+    display:inline-flex; align-items:center; gap:8px;
+    min-height:44px; padding:0 20px; border-radius:var(--radius-btn);
+    border:1px solid var(--input-b); background:var(--surface);
+    color:var(--ink); font-weight:600; cursor:pointer; transition:all .15s;
+  }
+  .evidence-get-btn:hover { background:var(--soft); }
+  .evidence-get-btn:disabled { opacity:.5; cursor:not-allowed; }
+
+  /* Right sidebar */
+  .sidebar-card { display:flex; flex-direction:column; gap:12px; }
+  .fb-row { display:flex; gap:8px; }
+  .fb-btn {
+    flex:1; min-height:40px; padding:0 10px;
+    border:1px solid var(--input-b); border-radius:8px;
+    background:var(--surface); color:var(--ink); font:inherit;
+    font-size:14px; cursor:pointer; transition:all .15s;
+  }
+  .fb-btn:hover { background:var(--soft); }
+  .fb-btn.yes { background:#E8EEFD; border-color:#1D4FD7; color:#1D4FD7; }
+  .fb-btn.no  { background:var(--fake-pill); border-color:var(--fake-text); color:var(--fake-text); }
+  .meta-grid  { display:grid; grid-template-columns:auto 1fr; gap:8px 12px; font-size:13px; }
+  .meta-label { color:var(--muted); }
+  .meta-value { font-weight:600; }
+
+  .search-link {
+    display:inline-flex; align-items:center; gap:6px;
+    font-size:14px; font-weight:600; color:var(--real-text);
+    text-decoration:none;
+  }
+  .search-link:hover { text-decoration:underline; }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-logo" href="/">
+      <svg aria-hidden="true" width="28" height="28" viewBox="0 0 28 28" fill="none">
+        <rect width="28" height="28" rx="7" fill="#0F1728"/>
+        <path d="M8 14.5l4 4 8-9" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      VeriNews
+    </a>
+    <div class="nav-tabs">
+      <a class="nav-tab" href="/">Analyze</a>
+      <a class="nav-tab" href="/history">History</a>
+    </div>
+    <a class="nav-cta" href="/">New check</a>
+  </div>
+</nav>
+
+<!-- Loading -->
+<div id="loading-view" class="container" style="padding-top:80px;text-align:center;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:14px">
+  <svg width="40" height="40" viewBox="0 0 40 40">
+    <circle cx="20" cy="20" r="16" stroke="#E1E4EA" stroke-width="4" fill="none"/>
+    <circle cx="20" cy="20" r="16" stroke="#1D4FD7" stroke-width="4" fill="none" stroke-dasharray="80 24" stroke-linecap="round" style="animation:spin .8s linear infinite"/>
+  </svg>
+  <p>Analyzing…</p>
+</div>
+
+<main class="container" id="result-view" style="padding-top:36px;padding-bottom:72px;display:none;flex-direction:column;gap:22px">
+
+  <!-- Submitted text header -->
+  <div style="max-width:760px">
+    <p class="kicker">Checked claim</p>
+    <p id="submitted-text" style="font-size:17px;line-height:1.65;margin:0"></p>
+  </div>
+
+  <div style="display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start">
+
+    <!-- ── Main column ────────────────────────────────────────────── -->
+    <div style="flex:3 1 500px;min-width:0;display:flex;flex-direction:column;gap:18px">
+
+      <!-- Verdict card -->
+      <div class="card" id="verdict-card">
+        <div style="display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:14px">
+          <div style="flex:1;min-width:200px">
+            <p class="kicker">Model assessment</p>
+            <div class="verdict-label" id="verdict-label">—</div>
+            <div class="split-bar-wrap" style="margin-top:10px">
+              <div class="split-labels">
+                <span style="color:var(--fake-text)" id="fake-pct">Fake —</span>
+                <span style="color:var(--real-text)" id="real-pct">Real —</span>
+              </div>
+              <div class="split-bar" id="split-bar" role="img" aria-label="probability split">
+                <div class="split-bar-fake" id="bar-fake" style="width:50%"></div>
+                <div class="split-bar-real" id="bar-real" style="flex:1"></div>
+              </div>
+            </div>
+            <p class="verdict-caveat">Writing-pattern score — not a fact-check.</p>
+          </div>
+          <span class="pill" id="verdict-pill" style="margin-top:4px">—</span>
+        </div>
+      </div>
+
+      <!-- Model switcher -->
+      <div class="card" style="display:flex;flex-direction:column;gap:12px">
+        <div>
+          <p class="kicker">Switch model</p>
+          <p class="sub" id="model-desc">Select a classifier to re-run the analysis.</p>
+        </div>
+        <div class="model-tabs" id="model-tabs"></div>
+      </div>
+
+      <!-- Word explanation -->
+      <div class="card" style="display:flex;flex-direction:column;gap:14px">
+        <div>
+          <p class="kicker">Explainability</p>
+          <h2 class="section-h2">Why the model leaned this way</h2>
+          <p class="sub">Words highlighted in the claim; bars show directional influence.</p>
+        </div>
+        <div class="explained-text" id="highlight-text"></div>
+        <div class="word-bars" id="word-bars"></div>
+        <p style="font-size:12px;color:var(--muted);margin:0">
+          <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:rgba(29,79,215,.35);margin-right:4px;vertical-align:middle"></span>pushes toward Real &nbsp;
+          <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:rgba(194,71,15,.35);margin-right:4px;vertical-align:middle"></span>pushes toward Fake
+        </p>
+      </div>
+
+      <!-- Source comparison — magazine card layout -->
+      <div class="card" style="display:flex;flex-direction:column;gap:14px">
+        <div>
+          <p class="kicker">Source comparison</p>
+          <h2 class="section-h2">Trusted reporting related to this claim</h2>
+          <p class="sub">Coverage retrieved from reputable outlets, ranked by similarity.</p>
+        </div>
+        <div id="articles-list"><p class="sub">Fetching sources…</p></div>
+        <a id="google-search-link" class="search-link" href="#" target="_blank" rel="noopener" style="display:none">
+          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M6 2a4 4 0 100 8 4 4 0 000-8zM14 14l-3-3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+          Open broader news search →
+        </a>
+      </div>
+
+      <!-- AI Evidence Brief (ChatGPT) -->
+      <div class="card" id="evidence-section" style="display:flex;flex-direction:column;gap:14px">
+        <div>
+          <p class="kicker">Model + ChatGPT</p>
+          <h2 class="section-h2">AI Evidence Brief</h2>
+          <p class="sub">Trusted news is fetched and summarised by ChatGPT — you get both the ML score and an AI analysis.</p>
+        </div>
+        <div id="evidence-content">
+          <button class="evidence-get-btn" id="evidence-btn" type="button">
+            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <circle cx="9" cy="9" r="7.2" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M6.5 9l2 2 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Get AI Evidence Brief
+          </button>
+          <p class="sub" style="margin-top:8px">Requires OPENAI_API_KEY in .env.</p>
+        </div>
+      </div>
+
+    </div><!-- /main column -->
+
+    <!-- ── Right sidebar ──────────────────────────────────────────── -->
+    <div style="flex:2 1 280px;min-width:0;display:flex;flex-direction:column;gap:14px">
+
+      <!-- Feedback -->
+      <div class="card sidebar-card">
+        <div>
+          <p class="kicker">Feedback</p>
+          <p style="font-weight:600;margin:0">Was this result helpful?</p>
+        </div>
+        <div class="fb-row" id="fb-row">
+          <button class="fb-btn" id="fb-yes">👍 Yes, helpful</button>
+          <button class="fb-btn" id="fb-no">👎 Not helpful</button>
+        </div>
+        <div style="border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:8px">
+          <a href="/" class="btn-primary" style="text-decoration:none">New check</a>
+          <a href="/history" class="btn-outline" style="text-decoration:none;text-align:center">View history</a>
+        </div>
+      </div>
+
+      <!-- Run metadata -->
+      <div class="card">
+        <p class="kicker">Analysis details</p>
+        <div class="meta-grid" id="meta-grid">
+          <span class="meta-label">Model</span><span class="meta-value" id="meta-model">—</span>
+          <span class="meta-label">Threshold</span><span class="meta-value" id="meta-thr">—</span>
+          <span class="meta-label">Confidence</span><span class="meta-value" id="meta-conf">—</span>
+          <span class="meta-label">Word count</span><span class="meta-value" id="meta-words">—</span>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</main>
+
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+
+<script>
+/* ── constants ───────────────────────────────────────────────────────── */
+const MODEL_DISPLAY = {
+  ensemble: {name:'Ensemble',      desc:'Soft-voting average of LR, NB and SVM. Best overall accuracy.'},
+  lr:       {name:'Logistic Reg.', desc:'Fast, interpretable linear model.'},
+  nb:       {name:'Naive Bayes',   desc:'Fastest classifier. Good for short headlines.'},
+  svm:      {name:'Linear SVM',    desc:'High-margin linear classifier. Excellent precision on longer articles.'},
+};
+const FALLBACK_IMGS = [
+  'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=400&q=80',
+  'https://images.unsplash.com/photo-1495020689067-958852a7765e?w=400&q=80',
+  'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=400&q=80',
+];
+
+/* ── helpers ─────────────────────────────────────────────────────────── */
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function pillClass(l){ const v=l?.toLowerCase(); return v==='fake'?'pill-fake':v==='real'?'pill-real':'pill-uncertain'; }
+function pillText(l) { const v=l?.toLowerCase(); return v==='fake'?'Likely fake':v==='real'?'Likely real':'Uncertain'; }
+function pct(v)      { return Math.round((v||0)*100); }
+
+/* ── highlight explanation words ─────────────────────────────────────── */
+function highlightText(text, explanation){
+  const wmap={};
+  (explanation||[]).forEach(({word,weight})=>{if(word)wmap[word.toLowerCase()]=weight;});
+  const tokens=text.match(/([a-zA-Z']+|[^a-zA-Z']+)/g)||[];
+  return tokens.map(tok=>{
+    const w=wmap[tok.toLowerCase()];
+    if(w===undefined||Math.abs(w)<0.02)return esc(tok);
+    const isReal=w>0, alpha=Math.min(0.75,0.18+Math.abs(w)*2);
+    const color=isReal?`rgba(29,79,215,${alpha.toFixed(2)})`:`rgba(194,71,15,${alpha.toFixed(2)})`;
+    return `<mark style="background:${color}">${esc(tok)}</mark>`;
+  }).join('');
+}
+
+/* ── word bars ───────────────────────────────────────────────────────── */
+function renderWordBars(explanation){
+  const el=document.getElementById('word-bars');
+  if(!explanation?.length){el.innerHTML='<p style="font-size:13px;color:var(--muted)">Word-level explanation not available for this model type.</p>';return;}
+  const mx=Math.max(...explanation.map(e=>Math.abs(e.weight)));
+  el.innerHTML=explanation.slice(0,10).map(({word,weight})=>{
+    const isReal=weight>0, p=mx>0?Math.round(Math.abs(weight)/mx*100):0;
+    const color=isReal?'var(--real-bar)':'var(--fake-bar)';
+    return `<div class="word-bar-row">
+      <span class="word-bar-label" title="${esc(word)}">${esc(word)}</span>
+      <div class="word-bar-track"><div class="word-bar-fill" style="width:${p}%;background:${color}"></div></div>
+      <span class="word-bar-score">${weight>0?'+':''}${weight.toFixed(2)}</span>
+    </div>`;
+  }).join('');
+}
+
+/* ── magazine article cards ──────────────────────────────────────────── */
+function renderArticles(articles, queryText){
+  const el=document.getElementById('articles-list');
+  if(!articles?.length){
+    el.innerHTML='<p class="sub">No related articles found. Add a NEWS_API_KEY in .env to enable live source retrieval.</p>';
+    return;
+  }
+  el.innerHTML=articles.map((a,i)=>{
+    const imgSrc=a.image_url||FALLBACK_IMGS[i%FALLBACK_IMGS.length];
+    const sim=Math.round((a.similarity_score||0)*100);
+    const url=esc(a.url||'#');
+    return `<div class="article-card">
+      <div class="article-img">
+        <img src="${esc(imgSrc)}" alt="" loading="lazy" onerror="this.parentElement.innerHTML='<div class=no-img>No preview</div>'">
+      </div>
+      <div class="article-body">
+        <div class="article-meta-row">
+          <span class="chip">${esc(a.source||'Source')}</span>
+          <div class="match-wrap">
+            <div class="match-track"><div class="match-fill" style="width:${sim}%"></div></div>
+            <span class="match-pct">${sim}% match</span>
+          </div>
+        </div>
+        <a class="article-title-link" href="${url}" target="_blank" rel="noopener noreferrer">${esc(a.title||'Untitled')}</a>
+        <p class="article-desc">${esc((a.description||'').substring(0,200))}</p>
+        <a class="article-read" href="${url}" target="_blank" rel="noopener noreferrer">Read source article →</a>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Google search link
+  const gl=document.getElementById('google-search-link');
+  gl.href='https://www.google.com/search?q='+encodeURIComponent((queryText||'').substring(0,120)+' news');
+  gl.style.display='inline-flex';
+}
+
+/* ── evidence brief ──────────────────────────────────────────────────── */
+function renderEvidence(ev, contradiction){
+  const el=document.getElementById('evidence-content');
+  const gpt=ev?.openai||{};
+  const ppl=ev?.perplexity||{};
+  const evidenceData=ev?.evidence||{};
+
+  const verdictColor=
+    gpt.verdict?.toLowerCase().includes('false')? 'var(--fake-text)' :
+    gpt.verdict?.toLowerCase().includes('true')?  'var(--real-text)' : 'var(--unc-text)';
+
+  let html=`<div class="evidence-section">
+    <div class="metric-row">
+      <div class="metric-box">
+        <div class="metric-label">AI Verdict</div>
+        <div class="metric-value" style="color:${verdictColor};font-size:16px">${esc(gpt.verdict||'N/A')}</div>
+      </div>
+      <div class="metric-box">
+        <div class="metric-label">AI Confidence</div>
+        <div class="metric-value">${gpt.confidence!=null?Math.round(gpt.confidence*100)+'%':'—'}</div>
+      </div>
+    </div>`;
+
+  const summary=gpt.summary||gpt.refined_summary||'';
+  if(summary) html+=`<div style="font-size:14px;line-height:1.65;color:var(--ink)">${esc(summary)}</div>`;
+
+  const kps=gpt.key_points||[];
+  if(kps.length){
+    html+=`<div>
+      <p class="kicker" style="margin-bottom:6px">Key findings</p>
+      <ol class="kp-list">${kps.map(p=>`<li>${esc(p)}</li>`).join('')}</ol>
+    </div>`;
+  }
+
+  if(contradiction&&contradiction.trim()){
+    html+=`<div>
+      <p class="kicker" style="margin-bottom:6px">Contradiction check</p>
+      <div class="contradiction-box">${esc(contradiction)}</div>
+    </div>`;
+  }
+
+  const cites=(evidenceData.citations||[]).slice(0,6);
+  if(cites.length){
+    html+=`<div>
+      <p class="kicker" style="margin-bottom:6px">Evidence links</p>
+      <div class="citation-list">${cites.map((u,i)=>`<a class="citation-link" href="${esc(u)}" target="_blank" rel="noopener">${i+1}. ${esc(u.substring(0,80))}${u.length>80?'…':''}</a>`).join('')}</div>
+    </div>`;
+  }
+
+  if(ppl.available&&ppl.summary){
+    html+=`<div>
+      <p class="kicker" style="margin-bottom:6px">Perplexity notes</p>
+      <p class="sub">${esc(ppl.summary)}</p>
+    </div>`;
+  }
+
+  if(!gpt.available&&!summary&&!kps.length&&!cites.length){
+    html+='<p class="sub">AI brief could not be generated. Check OPENAI_API_KEY in .env.</p>';
+  }
+
+  html+='</div>';
+  el.innerHTML=html;
+}
+
+/* ── model tabs ──────────────────────────────────────────────────────── */
+let _currentData=null;
+function renderModelTabs(activeKey){
+  const tabsEl=document.getElementById('model-tabs');
+  tabsEl.innerHTML=Object.entries(MODEL_DISPLAY).map(([k,m])=>
+    `<button class="model-tab${k===activeKey?' active':''}" data-key="${k}">${esc(m.name)}</button>`
+  ).join('');
+  document.getElementById('model-desc').textContent=(MODEL_DISPLAY[activeKey]||{desc:''}).desc;
+
+  tabsEl.querySelectorAll('.model-tab').forEach(btn=>{
+    btn.addEventListener('click',async()=>{
+      const key=btn.dataset.key;
+      if(key===activeKey||!_currentData)return;
+      tabsEl.querySelectorAll('.model-tab').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('model-desc').textContent=(MODEL_DISPLAY[key]||{desc:''}).desc;
+      document.getElementById('verdict-label').textContent='…';
+      try{
+        const res=await fetch('/api/analyze',{
+          method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({text:_currentData.text,model_key:key,include_evidence:false})
+        });
+        const nd=await res.json();
+        const full={...nd,text:_currentData.text,articles:nd.articles||_currentData.articles};
+        _currentData=full;
+        renderResult(full);
+      }catch{document.getElementById('verdict-label').textContent='Error';}
+    });
+  });
+}
+
+/* ── feedback ────────────────────────────────────────────────────────── */
+function setupFeedback(queryId){
+  const fbRow=document.getElementById('fb-row');
+  if(!queryId){fbRow.style.display='none';return;}
+  const yes=document.getElementById('fb-yes'), no=document.getElementById('fb-no');
+  async function send(val,btn,other,cls){
+    try{
+      await fetch('/api/feedback',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({query_id:queryId,feedback:val})});
+      btn.classList.add(cls); other.disabled=true;
+      fbRow.insertAdjacentHTML('afterend','<p style="font-size:13px;color:var(--muted)">Thanks for your feedback!</p>');
+    }catch{}
+  }
+  yes.addEventListener('click',()=>send('yes',yes,no,'yes'));
+  no.addEventListener('click', ()=>send('no',no,yes,'no'));
+}
+
+/* ── main render ─────────────────────────────────────────────────────── */
+function renderResult(data){
+  document.getElementById('loading-view').style.display='none';
+  const rv=document.getElementById('result-view');
+  rv.style.display='flex';
+
+  const text   = data.text||'';
+  const label  = data.label||'Uncertain';
+  const pFake  = data.prob_fake??0.5;
+  const pReal  = data.prob_real??0.5;
+  const fakeP  = pct(pFake), realP=pct(pReal);
+
+  document.getElementById('submitted-text').textContent = text.substring(0,300)+(text.length>300?'…':'');
+
+  // Verdict
+  const vl=document.getElementById('verdict-label');
+  vl.textContent = pillText(label);
+  vl.style.color = label==='Fake'?'var(--fake-text)':label==='Real'?'var(--real-text)':'var(--unc-text)';
+  const vp=document.getElementById('verdict-pill');
+  vp.textContent=pillText(label); vp.className='pill '+pillClass(label);
+  document.getElementById('fake-pct').textContent=`Fake ${fakeP}%`;
+  document.getElementById('real-pct').textContent=`Real ${realP}%`;
+  document.getElementById('bar-fake').style.width=fakeP+'%';
+
+  // Meta
+  const mkey=data.model_key||'ensemble';
+  document.getElementById('meta-model').textContent=(MODEL_DISPLAY[mkey]||{name:mkey}).name;
+  document.getElementById('meta-thr').textContent=data.threshold!=null?Math.round(data.threshold*100)+'%':'—';
+  document.getElementById('meta-conf').textContent=data.confidence!=null?Math.round(data.confidence*100)+'%':'—';
+  document.getElementById('meta-words').textContent=text.trim().split(/\s+/).length+' words';
+
+  // Model tabs
+  renderModelTabs(mkey);
+
+  // Explanation
+  const expl=data.explanation||[];
+  document.getElementById('highlight-text').innerHTML=expl.length?highlightText(text,expl):esc(text.substring(0,600));
+  renderWordBars(expl);
+
+  // Articles
+  renderArticles(data.articles, text);
+
+  // Evidence button (re-enable)
+  const eBtn=document.getElementById('evidence-btn');
+  if(eBtn){
+    eBtn.disabled=false;
+    eBtn.onclick=async()=>{
+      eBtn.disabled=true;
+      eBtn.innerHTML='<span class="spinner" style="border:2px solid #ccc;border-top-color:#0F1728"></span> Calling ChatGPT…';
+      try{
+        const res=await fetch('/api/evidence',{
+          method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({text,ml_label:label,ml_confidence:data.confidence||0.5})
+        });
+        const ev=await res.json();
+        // Also run contradiction check if articles exist
+        renderEvidence(ev, null);
+      }catch(e){
+        document.getElementById('evidence-content').innerHTML='<p class="sub" style="color:var(--fake-text)">Evidence brief failed: '+esc(e.message)+'</p>';
+      }
+    };
+  }
+
+  // Feedback
+  setupFeedback(data.query_id);
+}
+
+/* ── init ────────────────────────────────────────────────────────────── */
+(async()=>{
+  // Try sessionStorage first
+  const cached=sessionStorage.getItem('vn_result');
+  if(cached){
+    try{sessionStorage.removeItem('vn_result');_currentData=JSON.parse(cached);renderResult(_currentData);return;}catch{}
+  }
+  // Try ?id=N
+  const id=new URLSearchParams(window.location.search).get('id');
+  if(id){
+    try{
+      const res=await fetch('/api/result/'+encodeURIComponent(id));
+      if(!res.ok)throw new Error('not found');
+      const data=await res.json();
+      _currentData={...data,text:data.text||''};
+      renderResult(_currentData);
+    }catch{
+      document.getElementById('loading-view').innerHTML='<p>Result not found. <a href="/">New check</a></p>';
+    }
+    return;
+  }
+  window.location.href='/';
+})();
+</script>
+</body>
+</html>

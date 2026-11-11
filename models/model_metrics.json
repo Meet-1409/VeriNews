@@ -1,22 +1,74 @@
 {
-  "metadata": {
-    "last_updated": "2026-04-15T08:59:50.540183"
+  "lr": {
+    "test_accuracy": 0.9116,
+    "precision": 0.9091,
+    "recall": 0.916,
+    "f1": 0.9125,
+    "fake_precision": 0.9141,
+    "fake_recall": 0.907,
+    "fake_f1": 0.9106,
+    "macro_f1": 0.9116,
+    "auc": 0.9693,
+    "threshold": 0.48,
+    "confusion": {
+      "TP": 4800,
+      "FP": 480,
+      "TN": 4683,
+      "FN": 440
+    }
+  },
+  "nb": {
+    "test_accuracy": 0.8358,
+    "precision": 0.8487,
+    "recall": 0.8202,
+    "f1": 0.8342,
+    "fake_precision": 0.8236,
+    "fake_recall": 0.8516,
+    "fake_f1": 0.8374,
+    "macro_f1": 0.8358,
+    "auc": 0.9122,
+    "threshold": 0.48,
+    "confusion": {
+      "TP": 4298,
+      "FP": 766,
+      "TN": 4397,
+      "FN": 942
+    }
+  },
+  "svm": {
+    "test_accuracy": 0.9268,
+    "precision": 0.921,
+    "recall": 0.9349,
+    "f1": 0.9279,
+    "fake_precision": 0.9329,
+    "fake_recall": 0.9187,
+    "fake_f1": 0.9257,
+    "macro_f1": 0.9268,
+    "auc": 0.9754,
+    "threshold": 0.48,
+    "confusion": {
+      "TP": 4899,
+      "FP": 420,
+      "TN": 4743,
+      "FN": 341
+    }
   },
   "ensemble": {
-    "train_accuracy": 0.8777748314266233,
-    "test_accuracy": 0.8541324575807334,
-    "precision": 0.8566238121855785,
-    "recall": 0.9145158884081754,
-    "f1": 0.8846237102244029,
-    "confusion_matrix": {
-      "true_positives": 6130,
-      "false_positives": 1026,
-      "true_negatives": 3233,
-      "false_negatives": 573
-    },
-    "fake_precision": 0.8494482396216501,
-    "fake_recall": 0.7590983799013853,
-    "real_precision": 0.8566238121855785,
-    "real_recall": 0.9145158884081754
+    "test_accuracy": 0.9099,
+    "precision": 0.9121,
+    "recall": 0.9088,
+    "f1": 0.9104,
+    "fake_precision": 0.9078,
+    "fake_recall": 0.9111,
+    "fake_f1": 0.9094,
+    "macro_f1": 0.9099,
+    "auc": 0.9677,
+    "threshold": 0.48,
+    "confusion": {
+      "TP": 4762,
+      "FP": 459,
+      "TN": 4704,
+      "FN": 478
+    }
   }
 }

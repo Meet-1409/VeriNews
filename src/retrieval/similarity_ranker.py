@@ -1,8 +1,17 @@
+"""
+VeriNews similarity ranker.
+
+Ranks news articles by TF-IDF cosine similarity to the submitted text.
+Accepts either a path to a pickled vectorizer or a preloaded one to avoid
+re-loading the file on every call.
+"""
+from __future__ import annotations
+
 import logging
-import joblib
-import numpy as np
-from typing import List, Dict
 from pathlib import Path
+from typing import Dict, List, Optional
+
+import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 
 from src.preprocessing.text_cleaner import clean_text
@@ -11,81 +20,75 @@ logger = logging.getLogger(__name__)
 
 
 def rank_articles_by_similarity(
-    fake_news_text: str,
+    query_text: str,
     articles: List[Dict],
-    vectorizer_path: str = "models/tfidf.pkl",
-    top_k: int = 5
+    vectorizer_path: Optional[str] = None,
+    vectorizer=None,
+    top_k: int = 5,
 ) -> List[Dict]:
     """
-    Rank related publisher coverage by similarity to submitted text.
+    Rank articles by cosine similarity to query_text.
 
-    Args:
-        fake_news_text (str): User-submitted headline or article text
-        articles (List[Dict]): Retrieved news articles
-        vectorizer_path (str): Path to saved TF-IDF vectorizer
-        top_k (int): Number of top articles to return
+    Pass either `vectorizer_path` (string path to .pkl file) or a
+    preloaded `vectorizer` object — the latter skips disk I/O.
 
-    Returns:
-        List[Dict]: Top-K ranked articles with similarity score
+    Returns the top_k articles sorted by similarity (highest first),
+    with a "similarity_score" key added (raw cosine value 0–1).
     """
+    if not articles or not query_text:
+        logger.warning("rank_articles_by_similarity: empty input — returning as-is")
+        return articles[:top_k]
 
-    if not articles or not isinstance(fake_news_text, str):
-        logger.warning("Invalid input for similarity ranking")
-        return []
+    # ── load vectorizer ──────────────────────────────────────────────────
+    if vectorizer is None:
+        if vectorizer_path is None:
+            raise ValueError("Either vectorizer_path or vectorizer must be provided")
+        import pickle
+        p = Path(vectorizer_path)
+        if not p.is_absolute():
+            p = Path(__file__).resolve().parent.parent.parent / p
+        if not p.exists():
+            logger.warning("TF-IDF file not found at %s — returning unsorted", p)
+            for a in articles[:top_k]:
+                a.setdefault("similarity_score", 0.0)
+            return articles[:top_k]
+        with open(p, "rb") as f:
+            vectorizer = pickle.load(f)
 
-    # Resolve paths relative to project root if they're relative paths
-    if not Path(vectorizer_path).is_absolute():
-        # Try to find project root (parent of src directory)
-        current_file = Path(__file__)
-        project_root = current_file.parent.parent.parent
-        vectorizer_path = project_root / vectorizer_path
+    # ── vectorise ────────────────────────────────────────────────────────
+    cleaned_query = clean_text(query_text)
 
-    # Load trained TF-IDF vectorizer
-    tfidf = joblib.load(str(vectorizer_path))
-
-    # Preprocess the submitted text
-    cleaned_fake_text = clean_text(fake_news_text)
-
-    # Collect article texts (prefer description, fallback to title)
-    article_texts = []
-    valid_articles = []
-
-    for article in articles:
-        content = article.get("description") or article.get("title")
-        if content:
-            article_texts.append(clean_text(content))
-            valid_articles.append(article)
+    article_texts: list[str] = []
+    valid_articles: list[Dict] = []
+    for art in articles:
+        body = art.get("description") or art.get("title") or ""
+        if body.strip():
+            article_texts.append(clean_text(body))
+            valid_articles.append(art)
 
     if not article_texts:
-        logger.warning("No valid article text found for ranking")
-        return []
+        for a in articles[:top_k]:
+            a.setdefault("similarity_score", 0.0)
+        return articles[:top_k]
 
-    # Transform texts using same TF-IDF vectorizer
-    fake_vector = tfidf.transform([cleaned_fake_text])
-    article_vectors = tfidf.transform(article_texts)
+    try:
+        query_vec   = vectorizer.transform([cleaned_query])
+        article_vec = vectorizer.transform(article_texts)
+        raw_sims    = cosine_similarity(query_vec, article_vec)[0]
+    except Exception as exc:
+        logger.warning("Similarity computation failed: %s", exc)
+        for a in valid_articles[:top_k]:
+            a.setdefault("similarity_score", 0.0)
+        return valid_articles[:top_k]
 
-    # Compute cosine similarity
-    raw_sims = cosine_similarity(fake_vector, article_vectors)[0]
-    raw_sims = np.clip(raw_sims, 0.0, None)
+    # ── rank & return ────────────────────────────────────────────────────
+    top_indices = np.argsort(raw_sims)[::-1][:top_k]
+    ranked: list[Dict] = []
+    for idx in top_indices:
+        art = valid_articles[idx].copy()
+        art["similarity_score"] = round(float(np.clip(raw_sims[idx], 0.0, 1.0)), 3)
+        ranked.append(art)
 
-    # Rank articles by similarity score
-    ranked_indices = np.argsort(raw_sims)[::-1][:top_k]
-
-    # Normalize so top score is 1.0 and others scale relative (avoids all 0.00)
-    sims_ranked = raw_sims[ranked_indices]
-    max_sim = float(np.max(sims_ranked))
-    if max_sim <= 0:
-        # Preserve the existing display behavior when there is no overlap.
-        sims_ranked = np.linspace(0.95, 0.5, len(ranked_indices))
-    else:
-        sims_ranked = sims_ranked / max_sim
-        sims_ranked = np.clip(sims_ranked, 0.01, 1.0)
-
-    ranked_articles = []
-    for i, idx in enumerate(ranked_indices):
-        article = valid_articles[idx].copy()
-        article["similarity_score"] = round(float(sims_ranked[i]), 2)
-        ranked_articles.append(article)
-
-    logger.info(f"Ranked top {len(ranked_articles)} articles by similarity")
-    return ranked_articles
+    logger.info("Ranked %d articles (top score: %.3f)", len(ranked),
+                ranked[0]["similarity_score"] if ranked else 0)
+    return ranked

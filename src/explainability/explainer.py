@@ -1,78 +1,61 @@
+"""
+VeriNews LIME-based word-level explanation.
+"""
+from __future__ import annotations
+
 import logging
-import joblib
-import numpy as np
-from pathlib import Path
+from typing import Callable
 
-from lime.lime_text import LimeTextExplainer
-from src.preprocessing.text_cleaner import clean_text
-
-logger = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 class FakeNewsExplainer:
-    """
-    Explainable AI module for fake news classification
-    using LIME.
-    """
+    """LIME text explainer with a lazy-initialised explainer instance."""
 
-    def __init__(
+    def __init__(self):
+        self._lime_explainer = None
+
+    def _get_lime(self):
+        if self._lime_explainer is None:
+            from lime.lime_text import LimeTextExplainer  # type: ignore
+            self._lime_explainer = LimeTextExplainer(
+                class_names=["Fake", "Real"],
+                random_state=42,
+            )
+        return self._lime_explainer
+
+    def explain(self, text: str, num_features: int = 12) -> list:
+        """Legacy stub — requires predict_fn set externally. Use explain_with_fn."""
+        return []
+
+    def explain_with_fn(
         self,
-        model_path: str = "models/fake_news_model.pkl",
-        vectorizer_path: str = "models/tfidf.pkl"
-    ):
-        logger.info("Loading model and vectorizer for explainability")
-
-        # Resolve paths relative to project root if they're relative paths
-        if not Path(model_path).is_absolute():
-            # Try to find project root (parent of src directory)
-            current_file = Path(__file__)
-            project_root = current_file.parent.parent.parent
-            model_path = project_root / model_path
-            vectorizer_path = project_root / vectorizer_path
-
-        self.model = joblib.load(str(model_path))
-        self.vectorizer = joblib.load(str(vectorizer_path))
-
-        self.class_names = ["Fake", "Real"]
-        self.explainer = LimeTextExplainer(class_names=self.class_names)
-
-    def _predict_proba_wrapper(self, texts):
+        text: str,
+        predict_fn: Callable,
+        num_features: int = 12,
+    ) -> list[tuple[str, float]]:
         """
-        Wrapper to provide probability-like output for LIME.
+        Run LIME with a provided predict_fn(texts) → proba array (n, 2).
+
+        Returns
+        -------
+        list of (word, weight) sorted by |weight| descending.
+        Positive weight → word pushes toward Real.
+        Negative weight → word pushes toward Fake.
         """
-        cleaned_texts = [clean_text(t) for t in texts]
-        vectors = self.vectorizer.transform(cleaned_texts)
-
-        if hasattr(self.model, "predict_proba"):
-            return self.model.predict_proba(vectors)
-
-        # Fallback for models like LinearSVC
-        preds = self.model.predict(vectors)
-        proba = np.zeros((len(preds), 2))
-        for i, p in enumerate(preds):
-            proba[i][p] = 1.0
-        return proba
-
-    def explain(self, text: str, num_features: int = 10) -> list:
-        """
-        Generate explanation for a single news article.
-
-        Args:
-            text (str): Raw news text
-            num_features (int): Number of words to explain
-
-        Returns:
-            list: List of (word, weight) tuples
-        """
-
-        if not isinstance(text, str) or text.strip() == "":
-            logger.warning("Invalid input received for explanation")
+        try:
+            exp = self._get_lime().explain_instance(
+                text,
+                predict_fn,
+                num_features=num_features,
+                num_samples=400,   # keep fast; increase for production
+                labels=[0],        # explain Fake class
+            )
+            # exp.as_list(label=0): (word, weight_for_fake)
+            # negate so positive = Real-pushing, negative = Fake-pushing
+            pairs = [(w, -wt) for w, wt in exp.as_list(label=0)]
+            pairs.sort(key=lambda x: abs(x[1]), reverse=True)
+            return pairs
+        except Exception as exc:
+            log.warning("LIME explanation failed: %s", exc)
             return []
-
-        explanation = self.explainer.explain_instance(
-            text_instance=text,
-            classifier_fn=self._predict_proba_wrapper,
-            num_features=num_features
-        )
-
-        return explanation.as_list()

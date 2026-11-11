@@ -96,6 +96,11 @@ Thumbs.db
 verinews.db
 *.onnx
 
+# Raw dataset folders (too large for Git)
+archive/
+archive-2/
+fake.csv
+
 # Generated reports and local exports
 site/
 coverage.xml

@@ -1,0 +1,225 @@
+/* ── VeriNews design tokens ─────────────────────────────────────────── */
+:root {
+  --bg:          #F4F5F7;
+  --surface:     #FFFFFF;
+  --ink:         #0F1728;
+  --muted:       #4A5464;
+  --line:        #E1E4EA;
+  --input-b:     #C9CED8;
+  --soft:        #EEF0F4;
+  --primary:     #0F1728;
+  --primary-fg:  #FFFFFF;
+
+  /* Fake */
+  --fake-text:   #A33A0B;
+  --fake-bar:    #C2470F;
+  --fake-pill:   #FCEFE6;
+
+  /* Real */
+  --real-text:   #1D4FD7;
+  --real-bar:    #1D4FD7;
+  --real-pill:   #E8EEFD;
+
+  /* Uncertain */
+  --unc-text:    #3E4756;
+  --unc-pill:    #ECEEF2;
+
+  --radius-card: 14px;
+  --radius-btn:  10px;
+  --max-w:       1120px;
+}
+
+/* ── Reset ──────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.55;
+}
+a { color: var(--real-text); }
+a:hover { color: #153BA6; }
+button, input, textarea, select {
+  font-family: inherit;
+  font-size: inherit;
+}
+h1, h2, h3 {
+  font-family: 'Space Grotesk', sans-serif;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  margin: 0;
+}
+
+/* ── Layout ─────────────────────────────────────────────────────────── */
+.container { max-width: var(--max-w); margin: 0 auto; padding: 0 24px; }
+
+/* ── Nav ─────────────────────────────────────────────────────────────── */
+.nav {
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.nav-inner {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  padding: 10px 24px;
+  display: flex;
+  align-items: center;
+  gap: 8px 28px;
+  flex-wrap: wrap;
+}
+.nav-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--ink);
+  min-height: 44px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 19px;
+}
+.nav-tabs { display: flex; gap: 2px; flex: 1; }
+.nav-tab {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 8px;
+  color: var(--muted);
+  font-weight: 500;
+  text-decoration: none;
+  transition: background .15s;
+}
+.nav-tab:hover  { background: var(--soft); color: var(--ink); }
+.nav-tab.active { background: var(--soft); color: var(--ink); font-weight: 600; }
+.nav-cta {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: var(--radius-btn);
+  background: var(--primary);
+  color: var(--primary-fg);
+  font-weight: 600;
+  text-decoration: none;
+}
+.nav-cta:hover { opacity: .88; color: var(--primary-fg); }
+
+/* ── Verdict pills ───────────────────────────────────────────────────── */
+.pill {
+  display: inline-block;
+  padding: 3px 11px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.6;
+}
+.pill-fake      { background: var(--fake-pill); color: var(--fake-text); }
+.pill-real      { background: var(--real-pill); color: var(--real-text); }
+.pill-uncertain { background: var(--unc-pill);  color: var(--unc-text);  }
+
+/* ── Buttons ─────────────────────────────────────────────────────────── */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 22px;
+  border: none;
+  border-radius: var(--radius-btn);
+  background: var(--primary);
+  color: var(--primary-fg);
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity .15s;
+}
+.btn-primary:hover:not(:disabled) { opacity: .88; }
+.btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+.btn-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--input-b);
+  border-radius: var(--radius-btn);
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s;
+}
+.btn-outline:hover { background: var(--soft); }
+.btn-outline.active { background: var(--primary); color: var(--primary-fg); border-color: var(--primary); }
+
+/* ── Cards ───────────────────────────────────────────────────────────── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  padding: 20px;
+}
+
+/* ── Split probability bar ────────────────────────────────────────────── */
+.split-bar-wrap { display: flex; flex-direction: column; gap: 6px; }
+.split-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  font-weight: 600;
+}
+.split-bar {
+  display: flex;
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--unc-pill);
+  gap: 2px;
+}
+.split-bar-fake { background: var(--fake-bar); }
+.split-bar-real { background: var(--real-bar); }
+
+/* ── Spinner ─────────────────────────────────────────────────────────── */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin .6s linear infinite;
+  flex-shrink: 0;
+}
+
+/* ── Error banner ────────────────────────────────────────────────────── */
+.error-banner {
+  display: none;
+  background: #FFF0EE;
+  border: 1px solid #F4B8AD;
+  border-radius: 8px;
+  padding: 10px 16px;
+  color: #7A1F0E;
+  font-size: 14px;
+}
+
+/* ── Focus rings ─────────────────────────────────────────────────────── */
+input:focus,
+textarea:focus,
+select:focus,
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--real-text);
+  outline-offset: 2px;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .container { padding: 0 16px; }
+  .nav-inner  { padding: 10px 16px; }
+}

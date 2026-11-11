@@ -1,124 +1,218 @@
-import sqlite3
+"""
+VeriNews SQLite persistence layer.
+
+Stores queries, verified articles and user feedback.
+Schema is forward-compatible: ALTER TABLE migrations run on startup.
+"""
+from __future__ import annotations
+
 import logging
+import sqlite3
 from datetime import datetime
-from typing import List, Dict
+from pathlib import Path
+from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
+ROOT    = Path(__file__).resolve().parent.parent.parent
+DB_PATH = ROOT / "verinews.db"
+
 
 class VeriNewsDB:
-    """
-    SQLite-based persistence layer for VeriNews.
-    Stores past queries and verified articles.
-    """
+    """SQLite-based persistence for VeriNews."""
 
-    def __init__(self, db_path: str = "verinews.db"):
-        self.db_path = db_path
+    def __init__(self, db_path: Optional[str] = None):
+        self.db_path = str(db_path or DB_PATH)
         self._initialize_database()
 
-    def _connect(self):
-        return sqlite3.connect(self.db_path)
+    # ── connection ───────────────────────────────────────────────────────
 
-    def _initialize_database(self):
-        logger.info("Initializing SQLite database")
+    def _connect(self) -> sqlite3.Connection:
+        conn = sqlite3.connect(self.db_path)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys = ON")
+        return conn
 
+    # ── schema ───────────────────────────────────────────────────────────
+
+    def _initialize_database(self) -> None:
         with self._connect() as conn:
-            cursor = conn.cursor()
-
-            cursor.execute("""
+            conn.execute("""
                 CREATE TABLE IF NOT EXISTS news_queries (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    query_text TEXT,
-                    label TEXT,
-                    confidence REAL,
-                    created_at TIMESTAMP
+                    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                    query_text  TEXT    NOT NULL,
+                    label       TEXT    NOT NULL,
+                    confidence  REAL,
+                    prob_fake   REAL,
+                    prob_real   REAL,
+                    model_key   TEXT    DEFAULT 'ensemble',
+                    created_at  TEXT    NOT NULL
                 )
             """)
-
-            cursor.execute("""
+            conn.execute("""
                 CREATE TABLE IF NOT EXISTS verified_articles (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    query_id INTEGER,
-                    title TEXT,
-                    url TEXT,
-                    description TEXT,
-                    source TEXT,
-                    image_url TEXT,
+                    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+                    query_id         INTEGER NOT NULL,
+                    title            TEXT,
+                    url              TEXT,
+                    description      TEXT,
+                    source           TEXT,
+                    image_url        TEXT,
                     similarity_score REAL,
                     FOREIGN KEY(query_id) REFERENCES news_queries(id)
                 )
             """)
-
-            cursor.execute("PRAGMA table_info(verified_articles)")
-            existing_columns = {row[1] for row in cursor.fetchall()}
-            if "description" not in existing_columns:
-                cursor.execute("ALTER TABLE verified_articles ADD COLUMN description TEXT")
-            if "image_url" not in existing_columns:
-                cursor.execute("ALTER TABLE verified_articles ADD COLUMN image_url TEXT")
-
-            cursor.execute("""
+            conn.execute("""
                 CREATE TABLE IF NOT EXISTS query_feedback (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    query_id INTEGER NOT NULL,
-                    feedback TEXT NOT NULL,
-                    created_at TIMESTAMP,
+                    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                    query_id   INTEGER NOT NULL,
+                    feedback   TEXT    NOT NULL CHECK(feedback IN ('yes','no')),
+                    created_at TEXT    NOT NULL,
                     FOREIGN KEY(query_id) REFERENCES news_queries(id)
                 )
             """)
-
             conn.commit()
+            # Migrate older schemas that might be missing columns
+            self._migrate(conn)
 
-    def save_query(self, query_text: str, label: str, confidence: float) -> int:
-        logger.info("Saving user query to database")
+    def _migrate(self, conn: sqlite3.Connection) -> None:
+        """Add columns that were introduced after initial release."""
+        existing: set[str] = {
+            row[1] for row in conn.execute("PRAGMA table_info(news_queries)")
+        }
+        new_cols = [
+            ("prob_fake",  "REAL"),
+            ("prob_real",  "REAL"),
+            ("model_key",  "TEXT DEFAULT 'ensemble'"),
+        ]
+        for col, typedef in new_cols:
+            if col not in existing:
+                conn.execute(f"ALTER TABLE news_queries ADD COLUMN {col} {typedef}")
+        conn.commit()
 
+    # ── writes ───────────────────────────────────────────────────────────
+
+    def save_query(
+        self,
+        query_text: str,
+        label: str,
+        confidence: float,
+        prob_fake: float = 0.0,
+        prob_real: float = 0.0,
+        model_key: str  = "ensemble",
+    ) -> int:
+        """Insert a new query and return its row id."""
         with self._connect() as conn:
-            cursor = conn.cursor()
-            cursor.execute(
+            cursor = conn.execute(
                 """
-                INSERT INTO news_queries (query_text, label, confidence, created_at)
-                VALUES (?, ?, ?, ?)
+                INSERT INTO news_queries
+                    (query_text, label, confidence, prob_fake, prob_real, model_key, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
                 """,
-                (query_text, label, confidence, datetime.now())
+                (query_text, label, confidence, prob_fake, prob_real,
+                 model_key, datetime.utcnow().isoformat()),
             )
             conn.commit()
-            return cursor.lastrowid
+            return cursor.lastrowid  # type: ignore[return-value]
 
-    def save_verified_articles(
-        self,
-        query_id: int,
-        articles: List[Dict]
-    ):
-        logger.info("Saving verified articles to database")
-
+    def save_verified_articles(self, query_id: int, articles: List[Dict]) -> None:
+        """Bulk-insert verified articles for a query."""
         with self._connect() as conn:
-            cursor = conn.cursor()
-            for article in articles:
-                cursor.execute(
-                    """
-                    INSERT INTO verified_articles
+            conn.executemany(
+                """
+                INSERT INTO verified_articles
                     (query_id, title, url, description, source, image_url, similarity_score)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                    """,
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                [
                     (
                         query_id,
-                        article.get("title"),
-                        article.get("url"),
-                        article.get("description"),
-                        article.get("source"),
-                        article.get("image_url"),
-                        article.get("similarity_score")
+                        a.get("title"),
+                        a.get("url"),
+                        a.get("description"),
+                        a.get("source"),
+                        a.get("image_url"),
+                        a.get("similarity_score"),
                     )
-                )
+                    for a in articles
+                ],
+            )
             conn.commit()
 
-    def fetch_similar_past_query(self, query_text: str) -> Dict:
+    def save_feedback(self, query_id: int, feedback: str) -> None:
+        """Store 'yes' or 'no' feedback for a query."""
+        with self._connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO query_feedback (query_id, feedback, created_at)
+                VALUES (?, ?, ?)
+                """,
+                (query_id, feedback, datetime.utcnow().isoformat()),
+            )
+            conn.commit()
+
+    # ── reads ────────────────────────────────────────────────────────────
+
+    def get_query_by_id(self, query_id: int) -> Optional[Dict]:
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT * FROM news_queries WHERE id = ?", (query_id,)
+            ).fetchone()
+        return dict(row) if row else None
+
+    def get_recent_queries(self, limit: int = 50) -> List[Dict]:
+        with self._connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT id, query_text, label, confidence, prob_fake,
+                       prob_real, model_key, created_at
+                FROM news_queries
+                ORDER BY created_at DESC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+        return [dict(r) for r in rows]
+
+    def get_verified_articles_for_query(self, query_id: int) -> List[Dict]:
+        with self._connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT title, url, description, source, similarity_score
+                FROM verified_articles
+                WHERE query_id = ?
+                ORDER BY similarity_score DESC
+                """,
+                (query_id,),
+            ).fetchall()
+        return [dict(r) for r in rows]
+
+    def get_feedback_count(self, query_id: Optional[int] = None) -> Dict[str, int]:
         """
-        Fetch the most recent identical query if it exists.
-        (Simple memory reuse – safe for academics)
+        Return yes/no counts. If query_id is given, counts for that query only;
+        otherwise global counts for the analytics view.
         """
         with self._connect() as conn:
-            cursor = conn.cursor()
-            cursor.execute(
+            if query_id is not None:
+                rows = conn.execute(
+                    "SELECT feedback, COUNT(*) FROM query_feedback "
+                    "WHERE query_id = ? GROUP BY feedback",
+                    (query_id,),
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    "SELECT feedback, COUNT(*) FROM query_feedback GROUP BY feedback"
+                ).fetchall()
+        result: Dict[str, int] = {"yes": 0, "no": 0}
+        for feedback, count in rows:
+            if feedback in result:
+                result[feedback] = count
+        return result
+
+    def fetch_similar_past_query(self, query_text: str) -> Dict:
+        """Return the most recent identical query if it exists (simple caching)."""
+        with self._connect() as conn:
+            row = conn.execute(
                 """
                 SELECT id, label, confidence
                 FROM news_queries
@@ -126,104 +220,6 @@ class VeriNewsDB:
                 ORDER BY created_at DESC
                 LIMIT 1
                 """,
-                (query_text,)
-            )
-            row = cursor.fetchone()
-
-            if row:
-                return {
-                    "query_id": row[0],
-                    "label": row[1],
-                    "confidence": row[2]
-                }
-            return {}
-
-    def get_recent_queries(self, limit: int = 50) -> List[Dict]:
-        """
-        Return recent queries for history view.
-        """
-        with self._connect() as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                """
-                SELECT id, query_text, label, confidence, created_at
-                FROM news_queries
-                ORDER BY created_at DESC
-                LIMIT ?
-                """,
-                (limit,),
-            )
-            rows = cursor.fetchall()
-
-        results: List[Dict] = []
-        for r in rows:
-            results.append(
-                {
-                    "id": r[0],
-                    "query_text": r[1],
-                    "label": r[2],
-                    "confidence": r[3],
-                    "created_at": r[4],
-                }
-            )
-        return results
-
-    def get_verified_articles_for_query(self, query_id: int) -> List[Dict]:
-        """
-        Return verified articles stored for a given query.
-        """
-        with self._connect() as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                """
-                SELECT title, url, description, source, image_url, similarity_score
-                FROM verified_articles
-                WHERE query_id = ?
-                ORDER BY similarity_score DESC
-                """,
-                (query_id,),
-            )
-            rows = cursor.fetchall()
-
-        articles: List[Dict] = []
-        for r in rows:
-            articles.append(
-                {
-                    "title": r[0],
-                    "url": r[1],
-                    "description": r[2],
-                    "source": r[3],
-                    "image_url": r[4],
-                    "similarity_score": r[5],
-                }
-            )
-        return articles
-
-    def save_feedback(self, query_id: int, feedback: str) -> None:
-        """Store user feedback (yes/no) for a verification. Used for improvement and analytics."""
-        if feedback not in ("yes", "no"):
-            return
-        with self._connect() as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                """
-                INSERT INTO query_feedback (query_id, feedback, created_at)
-                VALUES (?, ?, ?)
-                """,
-                (query_id, feedback, datetime.now()),
-            )
-            conn.commit()
-
-    def get_feedback_count(self) -> Dict[str, int]:
-        """Return counts of yes/no feedback for display or analytics."""
-        with self._connect() as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                "SELECT feedback, COUNT(*) FROM query_feedback GROUP BY feedback"
-            )
-            rows = cursor.fetchall()
-        result = {"yes": 0, "no": 0}
-        for row in rows:
-            if row[0] in result:
-                result[row[0]] = row[1]
-        return result
+                (query_text,),
+            ).fetchone()
+        return dict(row) if row else {}

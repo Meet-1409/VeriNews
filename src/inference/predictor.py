@@ -1,99 +1,140 @@
+"""
+VeriNews inference layer.
+
+FakeNewsPredictor wraps the ModelManager and the LIME explainer into
+a single call used by the FastAPI backend.
+"""
+from __future__ import annotations
+
 import logging
-import joblib
-import numpy as np
 from pathlib import Path
+from typing import Optional
 
-from src.preprocessing.text_cleaner import clean_text
+import numpy as np
 
-logger = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 class FakeNewsPredictor:
     """
-    Inference pipeline for fake news detection.
-    Loads trained model and TF-IDF vectorizer and
-    provides prediction on unseen news text.
+    High-level predictor: classification + fast coefficient explanation.
+
+    Parameters
+    ----------
+    model_key   : default model to use ("ensemble", "lr", "nb", "svm")
+    models_dir  : override path to the models/ directory
+    model_path, vectorizer_path : legacy positional params (ignored)
     """
 
     def __init__(
         self,
-        model_path: str = "models/fake_news_model.pkl",
-        vectorizer_path: str = "models/tfidf.pkl"
+        model_key: str = "ensemble",
+        models_dir: Optional[Path] = None,
+        # Legacy params kept for backward-compat
+        model_path: Optional[Path] = None,
+        vectorizer_path: Optional[Path] = None,
     ):
-        logger.info("Loading trained model and TF-IDF vectorizer")
+        self.default_model_key = model_key
+        from src.models.model_manager import ModelManager
+        self._manager = ModelManager(models_dir) if models_dir else ModelManager()
 
-        # Resolve paths relative to project root if they're relative paths
-        if not Path(model_path).is_absolute():
-            # Try to find project root (parent of src directory)
-            current_file = Path(__file__)
-            project_root = current_file.parent.parent.parent
-            model_path = project_root / model_path
-            vectorizer_path = project_root / vectorizer_path
+    # ── public API ───────────────────────────────────────────────────────
 
-        self.model = joblib.load(str(model_path))
-        self.vectorizer = joblib.load(str(vectorizer_path))
-
-    def predict(self, text: str) -> dict:
+    def predict(self, text: str, model_key: Optional[str] = None) -> dict:
         """
-        Predict whether the given news text is Fake or Real.
+        Classify text and return a structured result.
 
-        Args:
-            text (str): Raw news article text
-
-        Returns:
-            dict: Prediction result containing label and confidence
+        Returns
+        -------
+        {
+            "label":       "Fake" | "Real" | "Uncertain",
+            "confidence":  float,
+            "prob_fake":   float,
+            "prob_real":   float,
+            "model_key":   str,
+            "threshold":   float,
+            "explanation": list[tuple[str, float]],  # (word, weight)
+        }
         """
-
-        if not isinstance(text, str) or text.strip() == "":
-            logger.warning("Empty or invalid input received for prediction")
-            return {
-                "label": "Invalid",
-                "confidence": 0.0
-            }
-
-        # Preprocess text
-        cleaned_text = clean_text(text)
-
-        # Transform text using saved TF-IDF vectorizer
-        text_vector = self.vectorizer.transform([cleaned_text])
-
-        # Default values
-        label = "Fake"
-        confidence = 1.0
-
-        # Use calibrated probabilities when available to make a softer decision.
-        if hasattr(self.model, "predict_proba"):
-            probs = self.model.predict_proba(text_vector)[0]
-            classes = list(getattr(self.model, "classes_", [0, 1]))
-
-            # Find probability of Fake (0) and Real (1)
-            try:
-                idx_fake = classes.index(0)
-                idx_real = classes.index(1)
-            except ValueError:
-                # Fallback to first/second column
-                idx_fake, idx_real = 0, 1
-
-            prob_fake = float(probs[idx_fake])
-            prob_real = float(probs[idx_real])
-
-            # Strong bias toward Real/Uncertain for real-world news; Fake only when very confident.
-            if prob_fake >= 0.90:
-                label = "Fake"
-                confidence = prob_fake
-            elif prob_real >= 0.22:
-                label = "Real"
-                confidence = prob_real
-            else:
-                label = "Uncertain"
-                confidence = max(prob_fake, prob_real)
-        else:
-            # Models without predict_proba – keep original behaviour
-            prediction = self.model.predict(text_vector)[0]
-            label = "Real" if prediction == 1 else "Fake"
-            confidence = 1.0  # treated as high-confidence decision
+        key    = model_key or self.default_model_key
+        result = self._manager.predict(text, model_key=key)
+        expl   = self._fast_explain(text, key, n=12)
 
         return {
-            "label": label,
-            "confidence": round(float(confidence), 3)
+            "label":       result["label"],
+            "confidence":  round(max(result["prob_fake"], result["prob_real"]), 4),
+            "prob_fake":   result["prob_fake"],
+            "prob_real":   result["prob_real"],
+            "model_key":   key,
+            "threshold":   result["threshold"],
+            "explanation": expl,
         }
+
+    def explain_lime(
+        self,
+        text: str,
+        model_key: Optional[str] = None,
+        num_features: int = 12,
+    ) -> list[tuple[str, float]]:
+        """
+        Full LIME explanation (slower — call asynchronously in the API).
+
+        Returns list of (word, weight) sorted by |weight| descending.
+        Positive weight → pushes toward Real.
+        Negative weight → pushes toward Fake.
+        """
+        from src.explainability.explainer import FakeNewsExplainer
+        from src.preprocessing.text_cleaner import clean_text
+
+        key    = model_key or self.default_model_key
+        mgr    = self._manager
+        vec    = mgr.get_tfidf()
+        model  = mgr.get_model(key)
+
+        def _predict_fn(texts):
+            X = vec.transform([clean_text(t) for t in texts])
+            return model.predict_proba(X)
+
+        return FakeNewsExplainer().explain_with_fn(
+            text, _predict_fn, num_features=num_features
+        )
+
+    def available_models(self) -> list[dict]:
+        return self._manager.available_models()
+
+    # ── internals ────────────────────────────────────────────────────────
+
+    def _fast_explain(self, text: str, model_key: str, n: int = 12) -> list:
+        """
+        Coefficient-based word importance (instant, no LIME sampling).
+
+        Works for LR and LinearSVC; silently returns [] for NB or ensemble
+        since they have no coef_ attribute.
+        """
+        try:
+            from src.preprocessing.text_cleaner import clean_text
+
+            vec   = self._manager.get_tfidf()
+            model = self._manager.get_model(model_key)
+
+            # Unwrap CalibratedClassifierCV → base estimator
+            cal_clfs = getattr(model, "calibrated_classifiers_", None)
+            base_est = cal_clfs[0].estimator if cal_clfs else model
+
+            if not hasattr(base_est, "coef_"):
+                return []  # NB or ensemble → skip fast explain
+
+            coef       = np.asarray(base_est.coef_).flatten()
+            feat_names = vec.get_feature_names_out()
+
+            X_row       = vec.transform([clean_text(text)])
+            nonzero_idx = X_row.nonzero()[1]
+
+            # coef_ for LinearSVC/LR: positive = more Real (class 1)
+            pairs = [(feat_names[i], float(coef[i])) for i in nonzero_idx]
+            pairs.sort(key=lambda x: abs(x[1]), reverse=True)
+            return pairs[:n]
+
+        except Exception as exc:
+            log.debug("Fast explain skipped: %s", exc)
+            return []
