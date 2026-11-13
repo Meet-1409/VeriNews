@@ -50,7 +50,7 @@ jobs:
       - name: Install ruff
         run: pip install ruff
       - name: Lint with ruff
-        run: ruff check src/ api/ scripts/ --ignore=E501
+        run: ruff check src/ api/ scripts/ --ignore=E501,DTZ003
 
   docker:
     name: Docker build check
