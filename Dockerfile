@@ -23,7 +23,7 @@ WORKDIR /app
 # Copy installed packages from deps stage
 COPY --from=deps /usr/local/lib/python3.11 /usr/local/lib/python3.11
 COPY --from=deps /usr/local/bin            /usr/local/bin
-COPY --from=deps /root/nltk_data           /root/nltk_data 2>/dev/null || true
+COPY --from=deps /root/nltk_data           /root/nltk_data
 
 # libgomp is required at runtime by scikit-learn
 RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 \

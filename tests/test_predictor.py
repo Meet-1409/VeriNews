@@ -14,7 +14,7 @@ import types
 import pickle
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import numpy as np
 import pytest
@@ -25,19 +25,33 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
+class _FakeTfidf:
+    """Picklable TF-IDF stub — returns a fixed sparse-like array."""
+    vocabulary_ = {f"word{i}": i for i in range(10)}
+
+    def transform(self, texts):
+        import scipy.sparse as sp
+        n = len(texts) if hasattr(texts, "__len__") else 1
+        return sp.csr_matrix(np.zeros((n, 10)))
+
+
+class _FakeClassifier:
+    """Picklable classifier stub with fixed predict_proba."""
+    def __init__(self, prob_fake: float = 0.3):
+        self._prob_fake = prob_fake
+        self.classes_ = np.array([0, 1])
+
+    def predict_proba(self, X):
+        n = X.shape[0] if hasattr(X, "shape") else 1
+        return np.array([[self._prob_fake, 1.0 - self._prob_fake]] * n)
+
+
 def _make_fake_tfidf():
-    """Return a mock TF-IDF vectorizer that accepts strings."""
-    vec = MagicMock()
-    vec.transform.return_value = MagicMock()
-    return vec
+    return _FakeTfidf()
 
 
 def _make_fake_classifier(prob_fake: float = 0.3):
-    """Return a mock classifier with calibrated predict_proba."""
-    clf = MagicMock()
-    clf.predict_proba.return_value = np.array([[prob_fake, 1.0 - prob_fake]])
-    clf.classes_ = np.array([0, 1])
-    return clf
+    return _FakeClassifier(prob_fake)
 
 
 def _write_pickle(obj, path: Path):

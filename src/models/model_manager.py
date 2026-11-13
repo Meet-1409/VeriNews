@@ -59,7 +59,7 @@ class ModelManager:
     """
 
     def __init__(self, models_dir: Optional[Path] = None):
-        self._dir     = models_dir or MODELS_DIR
+        self._dir     = Path(models_dir) if models_dir else MODELS_DIR
         self._tfidf   = None
         self._models: dict[str, object]  = {}
         self._metrics: dict[str, dict]   = {}
