@@ -16,9 +16,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
 from pathlib import Path
-from typing import Optional
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -133,9 +131,9 @@ async def analyze(req: AnalyzeRequest):
     # ── Related articles (async, non-blocking) ───────────────────────────
     articles: list[dict] = []
     try:
-        from src.retrieval.news_fetcher      import fetch_verified_news
+        from src.models.model_manager import get_manager
+        from src.retrieval.news_fetcher import fetch_verified_news
         from src.retrieval.similarity_ranker import rank_articles_by_similarity
-        from src.models.model_manager        import get_manager
 
         # Compact query: first 10 meaningful words
         words = [w for w in text.split() if len(w) >= 4][:10]
@@ -161,7 +159,7 @@ async def analyze(req: AnalyzeRequest):
         log.warning("Article fetch skipped: %s", exc)
 
     # ── Evidence brief (optional, requires API keys) ──────────────────────
-    evidence: Optional[dict] = None
+    evidence: dict | None = None
     if req.include_evidence:
         try:
             from src.research.live_factcheck import LiveFactChecker

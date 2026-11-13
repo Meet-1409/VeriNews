@@ -22,11 +22,11 @@ Outputs in data/processed/:
 """
 
 from __future__ import annotations
+
 import logging
 import sys
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
@@ -120,7 +120,9 @@ def load_liar() -> pd.DataFrame:
         log.info("HuggingFace LIAR failed (%s) — trying direct TSV download.", exc)
 
     # ── Strategy 2: Direct GitHub TSV download ───────────────────────────────
-    import io, zipfile
+    import io
+    import zipfile
+
     import requests as req_lib
 
     LIAR_ZIP = "https://raw.githubusercontent.com/thiagohersan/liar-dataset/master/dataset/liar_dataset.zip"

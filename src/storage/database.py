@@ -10,7 +10,6 @@ import logging
 import sqlite3
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +20,7 @@ DB_PATH = ROOT / "verinews.db"
 class VeriNewsDB:
     """SQLite-based persistence for VeriNews."""
 
-    def __init__(self, db_path: Optional[str] = None):
+    def __init__(self, db_path: str | None = None):
         self.db_path = str(db_path or DB_PATH)
         self._initialize_database()
 
@@ -115,7 +114,7 @@ class VeriNewsDB:
             conn.commit()
             return cursor.lastrowid  # type: ignore[return-value]
 
-    def save_verified_articles(self, query_id: int, articles: List[Dict]) -> None:
+    def save_verified_articles(self, query_id: int, articles: list[dict]) -> None:
         """Bulk-insert verified articles for a query."""
         with self._connect() as conn:
             conn.executemany(
@@ -153,14 +152,14 @@ class VeriNewsDB:
 
     # ── reads ────────────────────────────────────────────────────────────
 
-    def get_query_by_id(self, query_id: int) -> Optional[Dict]:
+    def get_query_by_id(self, query_id: int) -> dict | None:
         with self._connect() as conn:
             row = conn.execute(
                 "SELECT * FROM news_queries WHERE id = ?", (query_id,)
             ).fetchone()
         return dict(row) if row else None
 
-    def get_recent_queries(self, limit: int = 50) -> List[Dict]:
+    def get_recent_queries(self, limit: int = 50) -> list[dict]:
         with self._connect() as conn:
             rows = conn.execute(
                 """
@@ -174,7 +173,7 @@ class VeriNewsDB:
             ).fetchall()
         return [dict(r) for r in rows]
 
-    def get_verified_articles_for_query(self, query_id: int) -> List[Dict]:
+    def get_verified_articles_for_query(self, query_id: int) -> list[dict]:
         with self._connect() as conn:
             rows = conn.execute(
                 """
@@ -187,7 +186,7 @@ class VeriNewsDB:
             ).fetchall()
         return [dict(r) for r in rows]
 
-    def get_feedback_count(self, query_id: Optional[int] = None) -> Dict[str, int]:
+    def get_feedback_count(self, query_id: int | None = None) -> dict[str, int]:
         """
         Return yes/no counts. If query_id is given, counts for that query only;
         otherwise global counts for the analytics view.
@@ -203,13 +202,13 @@ class VeriNewsDB:
                 rows = conn.execute(
                     "SELECT feedback, COUNT(*) FROM query_feedback GROUP BY feedback"
                 ).fetchall()
-        result: Dict[str, int] = {"yes": 0, "no": 0}
+        result: dict[str, int] = {"yes": 0, "no": 0}
         for feedback, count in rows:
             if feedback in result:
                 result[feedback] = count
         return result
 
-    def fetch_similar_past_query(self, query_text: str) -> Dict:
+    def fetch_similar_past_query(self, query_text: str) -> dict:
         """Return the most recent identical query if it exists (simple caching)."""
         with self._connect() as conn:
             row = conn.execute(

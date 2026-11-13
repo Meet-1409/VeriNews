@@ -16,9 +16,6 @@ import json
 import logging
 import pickle
 from pathlib import Path
-from typing import Optional
-
-import numpy as np
 
 log = logging.getLogger(__name__)
 
@@ -58,7 +55,7 @@ class ModelManager:
     Models are loaded on first access and cached for the process lifetime.
     """
 
-    def __init__(self, models_dir: Optional[Path] = None):
+    def __init__(self, models_dir: Path | None = None):
         self._dir     = Path(models_dir) if models_dir else MODELS_DIR
         self._tfidf   = None
         self._models: dict[str, object]  = {}
@@ -188,7 +185,7 @@ class ModelManager:
 
 # ── module-level singleton ───────────────────────────────────────────────
 
-_manager: Optional[ModelManager] = None
+_manager: ModelManager | None = None
 
 
 def get_manager() -> ModelManager:

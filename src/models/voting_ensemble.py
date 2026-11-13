@@ -5,6 +5,7 @@ SoftEnsemble is defined at module-level so it is fully picklable
 (pickle requires the class to be importable by dotted path).
 """
 from __future__ import annotations
+
 import numpy as np
 
 

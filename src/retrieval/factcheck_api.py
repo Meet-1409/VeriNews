@@ -3,12 +3,12 @@ Integrate with fact-checking APIs (Google FactCheck API, Snopes) to auto-label c
 This provides ground truth labels for custom dataset creation.
 """
 
-import requests
 import json
 import logging
-from typing import List, Dict, Tuple
-from datetime import datetime
 import os
+from datetime import datetime
+
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +27,7 @@ class FactCheckIntegration:
         self.google_api_url = 'https://factchecktools.googleapis.com/v1alpha1/claims:search'
         self.snopes_api_url = 'https://www.snopes.com'
 
-    def query_google_factcheck(self, query: str, limit: int = 5) -> List[Dict]:
+    def query_google_factcheck(self, query: str, limit: int = 5) -> list[dict]:
         """
         Query Google FactCheck API for fact-checked claims.
         
@@ -79,13 +79,13 @@ class FactCheckIntegration:
             return results
 
         except requests.exceptions.RequestException as e:
-            logger.error(f"Error querying Google FactCheck API: {str(e)}")
+            logger.error(f"Error querying Google FactCheck API: {e!s}")
             return []
         except KeyError as e:
-            logger.error(f"Unexpected API response format: {str(e)}")
+            logger.error(f"Unexpected API response format: {e!s}")
             return []
 
-    def get_snopes_fact_checks(self, limit: int = 20) -> List[Dict]:
+    def get_snopes_fact_checks(self, limit: int = 20) -> list[dict]:
         """
         Get recent fact-checks from Snopes (web scraping approach).
         
@@ -129,10 +129,10 @@ class FactCheckIntegration:
             return results
 
         except Exception as e:
-            logger.error(f"Error retrieving Snopes data: {str(e)}")
+            logger.error(f"Error retrieving Snopes data: {e!s}")
             return []
 
-    def combine_factcheck_sources(self) -> List[Dict]:
+    def combine_factcheck_sources(self) -> list[dict]:
         """
         Combine fact-checked claims from multiple sources.
         This creates a labeled dataset of verified claims.
@@ -155,7 +155,7 @@ class FactCheckIntegration:
         logger.info(f"Combined total: {len(all_claims)} fact-checked claims")
         return all_claims
 
-    def label_with_confidence(self, text: str) -> Tuple[int, float]:
+    def label_with_confidence(self, text: str) -> tuple[int, float]:
         """
         Label a piece of text based on fact-checking, with confidence score.
         

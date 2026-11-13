@@ -3,12 +3,12 @@ Web scraper to collect news articles from reputable sources for custom dataset.
 This scraper focuses on trusted sources: AP News, Reuters, BBC, etc.
 """
 
+import json
+import logging
+from datetime import datetime
+
 import requests
 from bs4 import BeautifulSoup
-from typing import List, Dict
-import json
-from datetime import datetime
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ class NewsArticleScraper:
             'bbc_world': 'https://www.bbc.com/news/world'
         }
 
-    def scrape_bbc_news(self, limit: int = 50) -> List[Dict]:
+    def scrape_bbc_news(self, limit: int = 50) -> list[dict]:
         """
         Scrape BBC News headlines (reputable, fact-checked source).
         
@@ -62,10 +62,10 @@ class NewsArticleScraper:
             return articles
 
         except Exception as e:
-            logger.error(f"Error scraping BBC: {str(e)}")
+            logger.error(f"Error scraping BBC: {e!s}")
             return []
 
-    def scrape_ap_news(self, limit: int = 50) -> List[Dict]:
+    def scrape_ap_news(self, limit: int = 50) -> list[dict]:
         """
         Scrape AP News headlines (fact-checked, reputable).
         
@@ -98,10 +98,10 @@ class NewsArticleScraper:
             return articles
 
         except Exception as e:
-            logger.error(f"Error scraping AP News: {str(e)}")
+            logger.error(f"Error scraping AP News: {e!s}")
             return []
 
-    def scrape_reuters(self, limit: int = 50) -> List[Dict]:
+    def scrape_reuters(self, limit: int = 50) -> list[dict]:
         """
         Scrape Reuters headlines (fact-checked, reputable).
         
@@ -134,10 +134,10 @@ class NewsArticleScraper:
             return articles
 
         except Exception as e:
-            logger.error(f"Error scraping Reuters: {str(e)}")
+            logger.error(f"Error scraping Reuters: {e!s}")
             return []
 
-    def collect_all_trusted_news(self, articles_per_source: int = 30) -> List[Dict]:
+    def collect_all_trusted_news(self, articles_per_source: int = 30) -> list[dict]:
         """
         Collect verified real news from multiple trusted sources.
         

@@ -1,6 +1,8 @@
 """Abstract base class for VeriNews classifiers."""
 from __future__ import annotations
+
 from abc import ABC, abstractmethod
+
 import numpy as np
 
 

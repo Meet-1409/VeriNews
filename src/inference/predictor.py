@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 
@@ -29,10 +28,10 @@ class FakeNewsPredictor:
     def __init__(
         self,
         model_key: str = "ensemble",
-        models_dir: Optional[Path] = None,
+        models_dir: Path | None = None,
         # Legacy params kept for backward-compat
-        model_path: Optional[Path] = None,
-        vectorizer_path: Optional[Path] = None,
+        model_path: Path | None = None,
+        vectorizer_path: Path | None = None,
     ):
         self.default_model_key = model_key
         from src.models.model_manager import ModelManager
@@ -40,7 +39,7 @@ class FakeNewsPredictor:
 
     # ── public API ───────────────────────────────────────────────────────
 
-    def predict(self, text: str, model_key: Optional[str] = None) -> dict:
+    def predict(self, text: str, model_key: str | None = None) -> dict:
         """
         Classify text and return a structured result.
 
@@ -73,7 +72,7 @@ class FakeNewsPredictor:
     def explain_lime(
         self,
         text: str,
-        model_key: Optional[str] = None,
+        model_key: str | None = None,
         num_features: int = 12,
     ) -> list[tuple[str, float]]:
         """

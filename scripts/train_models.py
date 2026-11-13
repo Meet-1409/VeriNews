@@ -51,7 +51,7 @@ from sklearn.svm import LinearSVC
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from src.models.voting_ensemble import SoftEnsemble        # picklable
+from src.models.voting_ensemble import SoftEnsemble  # picklable
 from src.preprocessing.text_cleaner import clean_text
 
 logging.basicConfig(

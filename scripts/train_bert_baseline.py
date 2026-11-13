@@ -23,6 +23,7 @@ Usage:
 """
 
 from __future__ import annotations
+
 import argparse
 import json
 import logging
@@ -99,14 +100,14 @@ def main() -> None:
 
     try:
         import torch
-        from transformers import (
-            AutoTokenizer,
-            AutoModelForSequenceClassification,
-            TrainingArguments,
-            Trainer,
-            EarlyStoppingCallback,
-        )
         from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
+        from transformers import (
+            AutoModelForSequenceClassification,
+            AutoTokenizer,
+            EarlyStoppingCallback,
+            Trainer,
+            TrainingArguments,
+        )
     except ImportError as e:
         log.error("Missing dependency: %s\nRun: pip install torch transformers accelerate", e)
         sys.exit(1)

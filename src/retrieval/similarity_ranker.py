@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Dict, List, Optional
 
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
@@ -21,11 +20,11 @@ logger = logging.getLogger(__name__)
 
 def rank_articles_by_similarity(
     query_text: str,
-    articles: List[Dict],
-    vectorizer_path: Optional[str] = None,
+    articles: list[dict],
+    vectorizer_path: str | None = None,
     vectorizer=None,
     top_k: int = 5,
-) -> List[Dict]:
+) -> list[dict]:
     """
     Rank articles by cosine similarity to query_text.
 
@@ -59,7 +58,7 @@ def rank_articles_by_similarity(
     cleaned_query = clean_text(query_text)
 
     article_texts: list[str] = []
-    valid_articles: list[Dict] = []
+    valid_articles: list[dict] = []
     for art in articles:
         body = art.get("description") or art.get("title") or ""
         if body.strip():
@@ -83,7 +82,7 @@ def rank_articles_by_similarity(
 
     # ── rank & return ────────────────────────────────────────────────────
     top_indices = np.argsort(raw_sims)[::-1][:top_k]
-    ranked: list[Dict] = []
+    ranked: list[dict] = []
     for idx in top_indices:
         art = valid_articles[idx].copy()
         art["similarity_score"] = round(float(np.clip(raw_sims[idx], 0.0, 1.0)), 3)

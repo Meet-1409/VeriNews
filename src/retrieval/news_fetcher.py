@@ -1,7 +1,7 @@
 import logging
-import requests
-from typing import List, Dict
 import re
+
+import requests
 
 from config.settings import NEWS_API_KEY, TRUSTED_SOURCES
 
@@ -49,7 +49,7 @@ def _compact_query(query: str) -> str:
 def fetch_verified_news(
     query: str,
     page_size: int = 10
-) -> List[Dict]:
+) -> list[dict]:
     """
     Fetch verified news articles related to the given query
     from trusted news sources using NewsAPI.

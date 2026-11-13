@@ -1,7 +1,6 @@
 import json
 import logging
 import re
-from typing import Dict, List
 
 import requests
 
@@ -24,7 +23,7 @@ class LiveFactChecker:
         self.perplexity_key = PERPLEXITY_API_KEY
         self.openai_key = OPENAI_API_KEY
 
-    def _build_newsapi_evidence(self, query: str, max_items: int = 6) -> Dict:
+    def _build_newsapi_evidence(self, query: str, max_items: int = 6) -> dict:
         articles = fetch_verified_news(query, page_size=max_items)
         evidence_items = []
         citations = []
@@ -53,7 +52,7 @@ class LiveFactChecker:
             "newsapi_configured": bool(NEWS_API_KEY),
         }
 
-    def _call_perplexity(self, query: str) -> Dict:
+    def _call_perplexity(self, query: str) -> dict:
         if not self.perplexity_key:
             return {
                 "available": False,
@@ -153,9 +152,9 @@ class LiveFactChecker:
         query: str,
         ml_label: str,
         ml_confidence: float,
-        evidence: Dict,
-        ppl_evidence: Dict,
-    ) -> Dict:
+        evidence: dict,
+        ppl_evidence: dict,
+    ) -> dict:
         if not self.openai_key:
             return {
                 "available": False,
@@ -258,7 +257,7 @@ class LiveFactChecker:
                 "refined_summary": "",
             }
 
-    def analyze(self, query: str, ml_result: Dict) -> Dict:
+    def analyze(self, query: str, ml_result: dict) -> dict:
         evidence = self._build_newsapi_evidence(query)
         ppl_evidence = self._call_perplexity(query) if self.perplexity_key else {
             "available": False,
@@ -283,7 +282,7 @@ class LiveFactChecker:
         }
 
 
-def check_contradiction(claim: str, articles: List[Dict], openai_key: str = None) -> str:
+def check_contradiction(claim: str, articles: list[dict], openai_key: str = None) -> str:
     """
     Ask OpenAI whether any of the given source snippets contradict the claim.
     Returns one sentence (e.g. a quoted contradiction or "No clear contradiction found.").
